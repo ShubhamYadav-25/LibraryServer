@@ -2,7 +2,7 @@ import * as bookRepository from "../repositories/bookRepository.js";
 import { attachLikedFlag } from "../utils/attachLikedFlag.js";
 import USER_ROLES from "../constants/userRoles.js";
 import pool from "../config/db.js";
-import { getBookRating } from "../repositories/reviewRepository.js";
+import { getBookRating, getBookRatingReview } from "../repositories/reviewRepository.js";
 
 
 export const fetchBooks = async ({user, role, page, limit, searchParams}) => {
@@ -17,11 +17,10 @@ export const fetchBooks = async ({user, role, page, limit, searchParams}) => {
   }
 
   const { books, total } = booksData;
-
   // Create liked set only if needed
   const result =
     role === USER_ROLES.STUDENT
-      ? attachLikedFlag(books, liked)
+      ? attachLikedFlag(books, liked) 
       : books; // skip unnecessary processing
 
   return {
@@ -37,11 +36,15 @@ export const fetchBook = async({book_id, role, user = null})=>{
 
   const student_id = user?.student_id || null;
   const book = await bookRepository.getBook(book_id, role, student_id);
+  const review = student_id !== null ? await getBookRatingReview(book_id, student_id): [];
+
   const bookRating = await getBookRating(book_id);
   const combined = {
     ...book,
-    ...bookRating
+    ...bookRating,
+    ...review
   };
+
   return combined;
 
 }

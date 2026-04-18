@@ -8,7 +8,7 @@ import { fetchBooks, fetchBook,
   getNewArrivals, getTrendingBooks, 
   toggleBookLike, getPopularBooks
 } from "../services/bookService.js";
-import { createComment, getComments, getRating, removeComment } from "../services/bookReviewService.js";
+import { addRating, createComment, getComments, getRating, removeComment, updateComment } from "../services/bookReviewService.js";
 
 
 export const get_books = async (req, res) => {
@@ -16,7 +16,6 @@ export const get_books = async (req, res) => {
     const user = req.user || null;
     const role = req.user?.role || "Guest"; 
 
-    console.log(user);
     const { page, limit, bookName, genre } = req.query;
 
     const pageNum = parseInt(page) || 1;
@@ -116,9 +115,10 @@ export const return_book = async (req,res) =>{
 export const request_book = async (req,res) =>{
   try {
     const student_id = req.user.student_id;
-    const { book_id, studentId } = req.body;
-
-    if (!book_id || studentId !== student_id) throw new Error("Invalid book");
+    // const { book } = req.body;
+    const  book_id = req.params.bookId;
+    
+    if (!book_id) throw new Error("Invalid book");
 
     const message = await requestBook({ book_id, student_id});
 
@@ -240,11 +240,9 @@ export const get_overdue_books = async (req,res) =>{
 
 export const get_comments = async(req, res)=>{
   try {
-    const book_id = req.params?.bookId || null;
+    const book_id = req.params.bookId;
 
-    if (!book_id) throw new Error("Invalid book");
-
-    const comments = await getComments(book_id);
+    const comments = await getComments({book_id});
     
     res.status(200).json({comments});
   } catch (error) {
@@ -256,13 +254,11 @@ export const get_comments = async(req, res)=>{
 
 export const write_comment = async (req, res) =>{
   try {
-    const book_id = req.params.bookId || null;
-    const student_id = req.user?.student_id || null;
-    const {rating, comment} = req.body;
+    const book_id = req.params.bookId;
+    const student_id = req.user.student_id;
+    const { comment } = req.body;
 
-    if (!book_id || ! student_id) throw new Error("Invalid book");
-
-    const message = await createComment(book_id, student_id, rating, comment);
+    const message = await createComment({book_id, student_id, comment});
     res.status(200).json(message);
 
   } catch (error) {
@@ -272,16 +268,28 @@ export const write_comment = async (req, res) =>{
 }
 
 
+export const update_comment = async(req,res) =>{
+  try {
+    const student_id = req.user.student_id;
+    const comment_id = req.params.commentId;
+    const { comment } = req.body;
+
+    const message = await updateComment({student_id, comment_id, comment});
+    res.status(200).json(message);
+  } catch (error) {
+    console.error("Error removing comments:", error);
+    res.status(500).json({ error: "Server side error" });
+  }
+}
+
+
 export const delete_comment = async (req, res) =>{
   try {
-    const book_id = req.params.bookId;
     const student_id = req.user.student_id;
     const comment_id = req.params.commentId;
 
-    if (!book_id || !comment_id) throw new Error("Invalid book");
-
-    const message = await removeComment({comment_id, book_id, student_id});
-    res.status(200).json(message)
+    const message = await removeComment({comment_id, student_id});
+    res.status(200).json(message);
   } catch (error) {
     console.error("Error removing comments:", error);
     res.status(500).json({ error: "Server side error" });
@@ -293,12 +301,27 @@ export const get_book_rating = async (req,res) =>{
   try {
     const book_id = req.params.bookId;
 
-    if(!book_id) throw new Error("Invalid book");
-
     const ratings = await getRating(book_id);
 
     res.status(200).json(ratings);
     
+  } catch (error) {
+    console.error("Error fetching rating:", error);
+    res.status(500).json({ error: "Server side error" });
+  }
+}
+
+
+export const rate_book = async(req, res)=>{
+  try {
+    const book_id = req.params.bookId;
+    const student_id = req.user.student_id;
+    const { rating } = req.body;
+
+    const result = await addRating({book_id, student_id, rating});
+
+    res.status(200).json(result);
+
   } catch (error) {
     console.error("Error fetching rating:", error);
     res.status(500).json({ error: "Server side error" });

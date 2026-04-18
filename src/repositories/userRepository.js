@@ -39,7 +39,7 @@ export const getStudentSeq = async(startYear, executor = pool)=>{
   if (row.length === 0) {
     const newSeq = 1;
 
-    await connection.execute(
+    await executor.execute(
       `INSERT INTO student_sequence (year, last_seq) 
        VALUES (?, ?)`,
       [startYear, newSeq]);

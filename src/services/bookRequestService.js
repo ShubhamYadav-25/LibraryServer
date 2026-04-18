@@ -12,16 +12,16 @@ import { cancelBookRequest,
 
 
 export const requestBook = async ({book_id, student_id})=>{
-
+  
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
     const book = await getBook(book_id);
-        
+
     if(!book) throw new Error("Invalid Book number");
 
     const data = await checkBookRequestLimit(student_id, connection);
-    if(data.is_limit_reached) throw new Error("Request Limit Reached");
+    if(data.is_limit_reached > 0) throw new Error("Request Limit Reached");
 
     const requested = await checkBookRequested(book_id, student_id, connection);
     if(requested){

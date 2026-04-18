@@ -5,7 +5,6 @@ import USER_ROLES from "../constants/userRoles.js";
 import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
 import { assignRole, 
     getRoleId,
-    getUserPermissions,
     getUserRole,
     saveRefreshToken,
     getStoredToken,
@@ -78,6 +77,7 @@ export const registerUser = async({firstName, lastName, email, password, role}) 
             case USER_ROLES.STUDENT:
                 const startYear = new Date().getFullYear();
                 let newSeq = await getStudentSeq(startYear, connection);
+                newSeq += 1
                 const id = `STU${startYear}${String(newSeq).padStart(3, '0')}`;
                 const batch = `${startYear}-${String(startYear + 4).slice(-2)}`;
                 

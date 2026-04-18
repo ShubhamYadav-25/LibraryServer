@@ -12,9 +12,11 @@ import {
   like_dislike_book,
   new_arrivals,
   popular_books,
+  rate_book,
   request_book,
   return_book,
   trending_books,
+  update_comment,
   write_comment,
 } from "../controllers/books.controller.js";
 
@@ -40,8 +42,11 @@ router.patch("/:bookId/returns", return_book);
 router.post("/:bookId/likes", like_dislike_book);
 router.post("/:bookId/requests", request_book);
 
+router.post("/:bookId/rating", rate_book);
+
 // comments
 router.post("/:bookId/comments", write_comment);
+router.put("/:bookId/comments/:commentId", update_comment);
 router.delete("/:bookId/comments/:commentId", delete_comment);
 
 export default router;

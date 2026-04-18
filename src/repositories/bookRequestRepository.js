@@ -124,7 +124,7 @@ export const checkBookRequestLimit = async(student_id, executor = pool)=>{
     WHERE br.is_fulfilled = 0 
       AND br.student_id = ?;`, [student_id]);
 
-  return row[0];
+  return row.length > 0 ? row[0] : 0;
 }
 
 export const checkBookRequested = async(book_id, student_id, executor = pool)=>{

@@ -14,7 +14,7 @@ export const getReviewsbyBook = async(book_id, executor = pool)=>{
       reviews 
     WHERE
         book_id = ?`, [book_id]);
-  return rows;
+  return rows.length > 0 ? rows : [];
 };
 
 
@@ -28,44 +28,31 @@ export const getReview = async(comment_id, executor = pool)=>{
 }
 
 
-export const addReview = async(book_id, student_id, rating, comment, executor = pool)=>{
-
-  await executor.query(`
-    INSERT INTO reviews(book_id,student_id,rating,book_review,created_at)
-    VALUES (?,?,?,?,NOW())`,[book_id, student_id, rating, comment]);
-  return
-};
-
-
-export const deleteReview = async(comment_id, executor = pool)=>{
+export const deleteReview = async(comment_id, student_id, executor = pool)=>{
 
   const [result] = await executor.query(`
     DELETE FROM reviews
-    WHERE review_id = ?;`,[comment_id]);
+    WHERE review_id = ? AND student_id = ?;`,[comment_id, student_id]);
 
   return result.affectedRows;
 }
 
 
 export const updateReview = async(
-  { book_id, student_id, review = null, rating = null },
+  {  comment_id, student_id, comment},
   executor = pool
 )=>{
 
   const [result] = await executor.execute(
     `
-    UPDATE book_ratings
+    UPDATE reviews
     SET
-      review = COALESCE(?, review),
-      rating = COALESCE(?, rating)
-    WHERE student_id = ? AND book_id = ?;
+      book_review = COALESCE(?, book_review)
+    WHERE student_id = ? AND review_id = ?;
     `,
-    [review, rating, student_id, book_id]
-  );
+    [comment, student_id, comment_id]);
 
-  if (result.affectedRows === 0) {
-    throw new Error("Student not found");
-  }
+  return result.affectedRows;
 };
 
 
@@ -82,4 +69,24 @@ export const getBookRating = async(book_id, executor = pool)=>{
         stars_5 as 5stars
     FROM book_ratings where book_id = ? ;`,[book_id]);
   return rows[0];
+}
+
+
+export const getBookRatingReview = async (book_id, student_id, executor = pool)=>{
+  const [row] = await executor.query(
+    `SELECT review_id, rating as my_rating, book_review as my_comment FROM reviews
+    where student_id = ? and book_id = ?;`,
+  [student_id, book_id]);
+
+  return row.length > 0 ? row[0] : false;
+}
+
+
+export const rateBook = async(book_id, student_id, rating, executor = pool)=>{
+  const [result] = await executor.query(
+    `INSERT INTO reviews(book_id,student_id, rating ,created_at)
+    VALUES (?,?,?,NOW())`,[book_id, student_id, rating]
+  );
+
+  return result.insertId;
 }
