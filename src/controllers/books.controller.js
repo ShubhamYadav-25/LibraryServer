@@ -60,16 +60,16 @@ export const get_book = async (req,res) =>{
 
 export const issue_book = async (req, res) => {
   try {
-    const { requestbook,  userId} = req.body;
+    const data = req.body;
     const staff_id = req.user.id;
     const loan_period = await getBookLoanPeriod();
-    
+
     await issueBook(
-      userId, 
-      requestbook.book_id, 
-      loan_period?loan_period:12, 
+      data.studentId, 
+      data.book_id, 
+      loan_period ? loan_period:12, 
       staff_id,
-      requestbook.request_id?requestbook.request_id:null
+      data.request_id ? data.request_id:null
     );
     res.json({
       message: "book issued successfully"

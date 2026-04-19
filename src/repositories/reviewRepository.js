@@ -4,16 +4,20 @@ import pool from "../config/db.js";
 export const getReviewsbyBook = async(book_id, executor = pool)=>{
 
   const [rows] = await executor.query(`
-    SELECT
-      review_id AS id,
-      rating,
-      book_review AS comment,
-      created_at AS date,
-      helpful_count as helpful
+    SELECT 
+        s.name,
+        r.review_id AS id,
+        r.rating,
+        r.book_review AS comment,
+        r.created_at AS date,
+        r.helpful_count AS helpful
     FROM
-      reviews 
+        reviews r
+            JOIN
+        student_overview s ON r.student_id = s.studentId
     WHERE
-        book_id = ?`, [book_id]);
+        book_id = ?;`, [book_id]);
+        
   return rows.length > 0 ? rows : [];
 };
 
@@ -61,7 +65,7 @@ export const getBookRating = async(book_id, executor = pool)=>{
   const [rows]= await executor.query(`
     SELECT 
         rating,
-        review_count as count,
+        review_count as totalReviews,
         stars_1 as 1stars,
         stars_2 as 2stars,
         stars_3 as 3stars,

@@ -87,7 +87,7 @@ export const getStudents = async (search, branch, limit, offset, executor = pool
 
     // Search across name & email
     if (search) {
-      conditions.push('(fullName LIKE ? OR email LIKE ?)');
+      conditions.push('(name LIKE ? OR email LIKE ?)');
       values.push(`%${search}%`);
       values.push(`%${search}%`);
     }
@@ -193,7 +193,7 @@ export const updateStudent = async ({
 
 
 export const lockStudentRow = async (student_id, executor = pool)=>{
-  await executor.excute(`SELECT * FROM students WHERE id = ? FOR UPDATE;`,
+  await executor.execute(`SELECT * FROM student WHERE id = ? FOR UPDATE;`,
     [student_id]
   )
 }

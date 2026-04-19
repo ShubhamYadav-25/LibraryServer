@@ -1,21 +1,34 @@
 import pool from "../config/db.js"; 
 
 
-export const getBookRequests = async(is_fulfilled,limit, offset, executor = pool)=>{
+export const getBookRequests = async(safemode, limit, offset, executor = pool)=>{
 
+  let whereClause = ``;
+  let is_fulfilled = 0;
+  if(safemode === 'active'){
+    whereClause = ` WHERE br.is_fulfilled= ? `;
+    is_fulfilled = 0;
+  }
+  else if (safemode === 'cancelled') {
+    whereClause = ` WHERE br.is_fulfilled= ? AND br.cancellation_date IS NOT NULL `;
+    is_fulfilled = 1;
+  } else {
+    whereClause = ` WHERE br.is_fulfilled= ? `;
+    is_fulfilled = 1;
+  }
     const [rows] = await executor.query(`
       SELECT br.request_id, br.student_id as studentId, br.book_id, 
       vb.title as bookTitle, vb.ISBN as isbn, vb.genre, 
       vb.status as status, sv.name as studentName, sv.department 
       FROM book_request br JOIN vw_books vb ON br.book_id = vb.book_id 
-      JOIN student_overview sv ON br.student_id = sv.studentId
-      WHERE br.is_fulfilled= ? AND br.cancellation_date IS NULL
+      JOIN student_overview sv ON br.student_id = sv.studentId 
+      ${whereClause}
       LIMIT ? OFFSET ?;`,[is_fulfilled, limit, offset]);
     
     const [[{ total }]] = await executor.query(`
       SELECT COUNT(*) AS total
-      FROM book_request
-      WHERE is_fulfilled=0 AND cancellation_date IS NULL;`);
+      FROM book_request br
+      ${whereClause};`, [is_fulfilled]);
 
     return { rows, total };
 }
@@ -95,7 +108,7 @@ export const cancelBookRequest = async(request_id, executor = pool)=>{
 
   const [row] =  await executor.query(`
       UPDATE book_request 
-      SET cancellation_date = NOW()
+      SET cancellation_date = NOW(), is_fulfilled = 1
       where request_id = ? AND is_fulfilled = 0
       AND cancellation_date IS NULL;`, [request_id]);
 

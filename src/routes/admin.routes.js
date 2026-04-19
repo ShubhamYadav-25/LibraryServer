@@ -37,7 +37,7 @@ router.get("/users", get_students);
 
 /* ---------- REQUESTS ---------- */
 router.get("/requests", get_all_requests);
-router.patch("/requests/:requestId", cancel_request);
+router.put("/requests/:requestId", cancel_request);
 
 /* ---------- BOOKS (ADMIN VIEW) ---------- */
 router.get("/books/overdue", get_overdue_books);

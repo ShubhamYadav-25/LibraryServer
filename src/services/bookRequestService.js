@@ -44,12 +44,10 @@ export const requestBook = async ({book_id, student_id})=>{
 
 export const fetchRequests = async ({pageNum, limitNum, safemode})=>{
 
-  const safeLimit = (typeof limitNum === 'number' && limitNum > 0 && limitNum < 7) ? limitNum : 3;
+  const safeLimit = (typeof limitNum === 'number' && limitNum > 0 && limitNum < 7) ? limitNum : 7;
   const offset = (pageNum - 1) * safeLimit;
 
-  const is_fullfilled = safemode === 'active' ? 0 : 1;
-
-  const {rows, total} = await getBookRequests( is_fullfilled, safeLimit, offset);
+  const {rows, total} = await getBookRequests( safemode, safeLimit, offset);
   return {data: rows, total}
 }
 
@@ -68,11 +66,7 @@ export const fetchRequest = async ({student_id, mode, page, limit}) =>{
 
 export const cancelRequest = async({request_id}) =>{
 
-  console.log(request_id);
-  const data = await getBookRequest(request_id);
-  if(!data) throw new Error("Invalid Request Id");
-
-  const result = await cancelBookRequest(data.request_id);
+  const result = await cancelBookRequest(request_id);
   if(!result) throw new Error("Request Already Served");
   
   return { message : "Request cancelled successfully"};

@@ -197,7 +197,7 @@ export const get_all_requests = async (req, res) =>{
         const pageNum = parseInt(page) || 1;
         const limitNum = parseInt(limit) || 7;
 
-        const safemode = mode !== undefined? String(mode): undefined;
+        const safemode = mode !== undefined? String(mode): 'passive';
 
         const { data, total} = await fetchRequests({pageNum, limitNum, safemode});
 

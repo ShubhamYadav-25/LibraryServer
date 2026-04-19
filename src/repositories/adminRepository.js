@@ -68,7 +68,7 @@ export const getRecentActivities = async(executor = pool)=>{
         ELSE TIMESTAMPDIFF(HOUR, T.return_date, NOW())
     END AS time, 
     CASE
-        WHEN T.return_date IS NULL THEN 'ISSUED'
+        WHEN T.return_date IS NULL THEN 'BORROWED'
         ELSE 'RETURNED'
     END AS activity_status
     FROM

@@ -54,7 +54,7 @@ export const issueBook = async (student_id, book_id, loan_period_days,
 
     // 5️⃣ Optional request fulfillment
     if (request_id) {
-      await bookRepository.fulfillRequest(
+      await issueBookRepository.fulfillRequest(
         request_id,
         book_id,
         connection
