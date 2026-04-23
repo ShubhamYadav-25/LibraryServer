@@ -170,3 +170,23 @@ export const getUsertransactions = async (limit, offset, isReturn, executor = po
 
     return { rows, total };
 };
+
+
+export const getActivetransaction = async(copy_id, student_id, executor = pool) =>{
+  const [row] = await executor.query(`
+    SELECT * FROM transaction_history
+    WHERE return_date IS NULL and student_id = ? and copy_id = ?;`,
+  [student_id, copy_id]);
+
+  return row.length > 0 ? row[0]: false;
+}
+
+
+export const changedueDate = async(transaction_id, due_date, executor = pool)=>{
+  const [result] = await executor.execute(`
+    Update transaction_history
+    set due_date = ?
+    where transaction_id = ?;`,[due_date, transaction_id]);
+
+  return result.affectedRows;
+}

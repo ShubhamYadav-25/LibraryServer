@@ -2,6 +2,8 @@ import express from "express";
 import { validateJwtToken } from "../middlewares/validateJwt.middleware.js";
 import { optionalAuth } from "../middlewares/optionalAuth.middleware.js"
 import {
+  add_book,
+  add_copies,
   delete_comment,
   get_book,
   get_book_rating,
@@ -13,6 +15,7 @@ import {
   new_arrivals,
   popular_books,
   rate_book,
+  renew_book,
   request_book,
   return_book,
   trending_books,
@@ -37,6 +40,8 @@ router.get("/:bookId/rating", get_book_rating);
 router.use(validateJwtToken);
 
 // actions (state changes)
+router.post("/",add_book);
+
 router.post("/:bookId/issues", issue_book);
 router.patch("/:bookId/returns", return_book);
 router.post("/:bookId/likes", like_dislike_book);
@@ -48,5 +53,8 @@ router.post("/:bookId/rating", rate_book);
 router.post("/:bookId/comments", write_comment);
 router.put("/:bookId/comments/:commentId", update_comment);
 router.delete("/:bookId/comments/:commentId", delete_comment);
+
+router.post("/:bookId/copy", add_copies);
+router.put("/:bookId/copy/:copyId", renew_book);
 
 export default router;

@@ -1,5 +1,6 @@
 import * as bookRepository from "../repositories/bookRepository.js";
 import { attachLikedFlag } from "../utils/attachLikedFlag.js";
+import { generateBookCopies } from "../utils/generateBookCopies.js";
 import USER_ROLES from "../constants/userRoles.js";
 import pool from "../config/db.js";
 import { getBookRating, getBookRatingReview } from "../repositories/reviewRepository.js";
@@ -47,6 +48,77 @@ export const fetchBook = async({book_id, role, user = null})=>{
 
   return combined;
 
+}
+
+
+export const addBook = async(data)=>{
+  const connection = await pool.getConnection();
+
+  try {
+
+    await connection.beginTransaction();
+
+    const exist = await bookRepository.checkBookExistance(data.ISBN);
+    if(exist) throw new Error("Book Already exist");
+
+    let cat_id = await bookRepository.getCategoryId(data.genre);
+    if(!cat_id){
+      cat_id = await bookRepository.addCategory(data.genre);
+      if(!cat_id) throw new Error("Unable to add category");
+    }
+
+    let author_id = await bookRepository.getAuthorId(data.author);
+    if(!author_id){
+      author_id = await bookRepository.addAuthor(data.author);
+      if(!author_id) throw new Error("Unable to add author");
+    }
+
+    const book_id = await bookRepository.addnewBook({
+      title: data.title,
+      ISBN: data.ISBN,
+      author_id,
+      cat_id,
+      publish_date: data.publish_date,
+      description: data.description,
+      pages: data.pages,
+      language: data.language,
+      shelf_location: data.shelf_location
+    }, connection);
+
+    if(!book_id) throw new Error("Issue in adding field in Book_Detail")
+
+    const copies = generateBookCopies(book_id, data.totalCopies || 1)
+
+    const final = bookRepository.addBookCopies(copies, connection);
+    if(!final) throw new Error("Unable to add book copies");
+    return { message: `Book added successfully`}
+
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally{
+    connection.release();
+  }
+}
+
+
+export const addCopies = async({book_id, totalCopies})=>{
+
+  const last_copie_id = await bookRepository.lastaddedcopy(book_id);
+
+  if(!last_copie_id) throw new Error("Book doesn't exist");
+
+  const parts = last_copie_id.split("-C");
+  const p_start_num = Number(parts[1]) + 1;
+
+  if(p_start_num>30) throw new Error("Can't add more then 30 copies");
+
+  const copies = generateBookCopies(book_id, totalCopies, p_start_num);
+
+  const rows = await bookRepository.addBookCopies(copies)
+  if(!rows) throw new Error("Unable to add book copies")
+
+  return {message : "Copies added successfully"};
 }
 
 
@@ -103,7 +175,7 @@ export const toggleBookLike = async ({ student_id, book_id }) => {
 
     await connection.commit();
 
-    return{ message: `Book ${result.action} successfully`}
+    return { message: `Book ${result.action} successfully`}
   } catch (error) {
     await connection.rollback();
     throw error;

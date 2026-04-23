@@ -4,6 +4,7 @@ import { calculateLateFine } from "../utils/calculateFine.js";
 import * as issueBookRepository from "../repositories/bookIssueRepository.js"
 import { setReadCommitted } from "../repositories/authRepository.js";
 import { lockStudentRow } from "../repositories/userRepository.js";
+import { changedueDate, getActivetransaction, getConfig } from "../repositories/adminRepository.js";
 
 
 export const issueBook = async (student_id, book_id, loan_period_days,
@@ -148,6 +149,29 @@ export const returnBook = async ({ copy_id, student_id}) => {
     connection.release();
   }
 };
+
+
+export const renewBook = async({copyId, student_id})=>{
+  const period = await getConfig("LOAN_PERIOD_DAYS");
+  const row = await getActivetransaction(copyId, student_id);
+
+  if(!row) throw new Error("Transaction not Found");
+
+  const IssueDate = new Date(row.issue_date);
+  const dueDate = new Date(row.due_date);
+
+  const diffMs = dueDate - IssueDate;
+
+  const diffDaysExact = diffMs / (1000 * 60 * 60 * 24);
+
+  if(diffDaysExact > period) throw new Error("Can't Renew this Book Know");
+
+  dueDate.setDate(dueDate.getDate() + period);
+  const result = await changedueDate(row.transaction_id, dueDate);
+  if(!result) throw new Error("Can't Renew this Book Know");
+
+  return {message: "Book renewed successfully"};
+}
 
 
 export const fetchUserIssuedBooks = async ({ student_id }) => {

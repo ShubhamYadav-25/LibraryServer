@@ -3,6 +3,7 @@ import USER_ROLES from "../constants/userRoles.js";
 
 const privilegedRoles = [USER_ROLES.ADMIN, USER_ROLES.LIBRARIAN];
 
+
 export const getBooks = async (searchParams = {}, limit, offset,  role, executor = pool) => {
 
     let whereClauses = [];
@@ -112,6 +113,95 @@ export const getBook = async (bookid, role, studentId = null, executor = pool) =
 
   return rows[0] || null;
 };
+
+
+export const checkBookExistance = async(ISBN, executor = pool) =>{
+  const [result] = await executor.query(`
+    SELECT book_id FROM book
+    WHERE isbn = ?;`,[ISBN]);
+
+  return result.length>0 ? true:false;
+}
+
+export const getCategoryId = async(genre, executor = pool) =>{
+  const [result] = await executor.query(`
+    SELECT cat_id from category
+    WHERE cat_name = ?;`,[genre]);
+
+  return result.length > 0 ? result[0].cat_id : false;
+}
+
+export const addCategory = async(genre, executor = pool) =>{
+  const [result] = await executor.query(`
+    INSERT INTO category(cat_name)
+    VALUE (?);`,[genre]);
+
+  return result.affectedRows > 0 ? result.insertId : false;
+}
+
+export const getAuthorId = async(author, executor = pool) =>{
+  const [result] = await executor.query(`
+    SELECT author_id FROM author
+    WHERE author_name = ?;`,[author]);
+
+  return result.length > 0 ? result[0].author_id : false;
+}
+
+export const addAuthor = async(author, executor = pool) =>{
+  const [result] = await executor.query(`
+    INSERT INTO author(author_name)
+    VALUE (?);`,[author]);
+
+  return result.affectedRows > 0 ? result.insertId : false;
+}
+
+export const addnewBook = async({
+  title,
+  ISBN,
+  author_id,
+  cat_id,
+  publish_date,
+  description,
+  pages,
+  language,
+  shelf_location
+}, executor = pool) =>{
+  const [result1] = await executor.execute(`
+    INSERT INTO book(book_name, author_id, cat_id, isbn, publication_date)
+    VALUE (?,?,?,?,?);`,[title, author_id, cat_id, ISBN, publish_date]);
+
+  if(!result1.insertId) throw new Error("Query fail to add data in book");
+
+  const [result2] = await executor.execute(`
+    INSERT INTO book_details
+    VALUE (?,?,?,?,?);`,[result1.insertId, description, pages, language, shelf_location]);
+
+  return result2.affectedRows > 0 ? result1.insertId: false;
+}
+
+
+export const lastaddedcopy = async(book_id, executor = pool) =>{
+  const [row] = await executor.query(`
+    SELECT 
+        copy_id
+    FROM
+        book_copy
+    WHERE
+        book_id = ?
+    ORDER BY copy_id DESC
+    LIMIT 1;`, [book_id]);
+
+  return row.length >0 ? row[0].copy_id : false;
+}
+
+
+export const addBookCopies = async(copies, executor = pool)=>{
+  const [rows] = await executor.query(`
+    Insert into book_copy(book_id,copy_id)
+    values ? ;`, [copies]);
+
+  return rows.affectedRows > 0 ? true : false; 
+}
 
 
 export const checkAvailability = async (book_id, executor = pool)=>{

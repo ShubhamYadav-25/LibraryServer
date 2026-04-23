@@ -3,10 +3,13 @@ import { requestBook } from "../services/bookRequestService.js";
 import { issueBook, returnBook, 
   fetchUserIssuedBooks,
   fetchDuebooks,
+  renewBook,
 } from "../services/bookIssueService.js";
 import { fetchBooks, fetchBook, 
   getNewArrivals, getTrendingBooks, 
-  toggleBookLike, getPopularBooks
+  toggleBookLike, getPopularBooks,
+  addBook,
+  addCopies
 } from "../services/bookService.js";
 import { addRating, createComment, getComments, getRating, removeComment, updateComment } from "../services/bookReviewService.js";
 
@@ -57,6 +60,53 @@ export const get_book = async (req,res) =>{
   }
 };
 
+
+export const add_book = async(req,res)=>{
+  try {
+    const data = req.body;
+
+    const result = await addBook(data);
+
+    res.status(200).json({
+      message: result.message
+    })
+
+  } catch (error) {
+    console.error("Error issuing book:", error);
+    res.status(500).json({ error: "Server side error" });
+  }
+}
+
+
+export const add_copies = async(req,res)=>{
+  try {
+    const book_id = req.params.bookId;
+    const {totalCopies} = req.body;
+    const message = await addCopies({book_id, totalCopies});
+
+    res.status(200).json(message);
+
+  } catch (error) {
+    console.error("Error issuing book:", error);
+    res.status(500).json({ error: "Server side error" });
+  }
+}
+
+
+export const renew_book = async(req,res) =>{
+  try {
+    const { bookId, copyId} = req.params;
+    const student_id = req.user.student_id;
+
+    const message = await renewBook({copyId, student_id});
+
+    res.status(200).json(message);
+
+  } catch (error) {
+    console.error("Error issuing book:", error);
+    res.status(500).json({ error: "Server side error" });
+  }
+}
 
 export const issue_book = async (req, res) => {
   try {
