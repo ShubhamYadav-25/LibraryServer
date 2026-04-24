@@ -6,6 +6,7 @@ import {
   getFine, 
   getStudentActivities, 
   payFine, 
+  payFines, 
   updateStudentDetails,  
 } from "../services/userService.js";
 
@@ -141,16 +142,28 @@ export const get_fines = async (req, res) => {
 export const pay_fine = async (req,res) =>{
     try {
         const { fine_id, payment_method, payment_id, amount} = req.body;
-        const { student_id} = String(req.params.studentId);
+        const student_id = req.user.student_id;
 
-        if (student_id !== req.user.student_id) {
-            return res.status(403).json({ error: "Unauthorized access" });
-        }
+        console.log(fine_id, payment_method, payment_id, amount, student_id);
+        const message = await payFine({fine_id, payment_method, payment_id, amount, student_id});
 
-        const message = await payFine({ fine_id, payment_method, payment_id, amount, student_id});
+        res.status(200).json(message);
 
-        res.status(200).json({ message});
+    } catch (error) {
+        console.error("Error fetching books:", error);
+        return res.status(500).json({ error: "Server side error" });
+    }
+}
 
+
+export const pay_fines = async(req, res)=>{
+    try {
+        const student_id = req.user.student_id;
+        const { payment_method, payment_id, amount} = req.body;
+
+        const message = await payFines({student_id, payment_method, payment_id, amount});
+        
+        res.status(200).json(message);
     } catch (error) {
         console.error("Error fetching books:", error);
         return res.status(500).json({ error: "Server side error" });
@@ -252,8 +265,8 @@ export const cancel_request = async (req, res) =>{
 
 export const delete_requests = async (req, res) =>{
     try {
-        const { request_id } = Number(req.params.requestId);
-        const { student_id } = String(req.params.studentId);
+        const  request_id  = Number(req.params.requestId);
+        const  student_id  = String(req.params.studentId);
         const message = deleteRequest({request_id, student_id});
 
         res.status(200).json(message);

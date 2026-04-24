@@ -248,8 +248,7 @@ export const getStudentStats = async(student_id)=>{
 export const getUserFines = async (
   student_id,
   is_paid,
-  limit = 10,
-  offset = 0
+  executor = pool
 ) => {
   let selectQuery = `
     SELECT 
@@ -281,20 +280,17 @@ export const getUserFines = async (
   const params = [student_id];
 
   // Optional filter
-  if (is_paid !== undefined) {
+  if (is_paid !== undefined  || is_paid === 0) {
     query += ` AND f.is_paid = ?`;
     params.push(is_paid);
   }
 
   // Add sorting (important for pagination consistency)
-  query += ` ORDER BY f.fine_date DESC`;
+  query += ` ORDER BY f.fine_date DESC ;`;
 
-  // Add pagination
-  query += ` LIMIT ? OFFSET ?`;
-  params.push(Number(limit), Number(offset));
+  const [rows] = await executor.query(query, params);
 
-  const [rows] = await pool.query(query, params);
-  const [countResult] = await pool.query(
+  const [countResult] = await executor.query(
     `SELECT COUNT(*) as total FROM fine_record WHERE student_id = ? ${is_paid !== undefined ? "AND is_paid = ?" : ""}`,
     is_paid !== undefined ? [student_id, is_paid] : [student_id]
   );
@@ -321,10 +317,10 @@ export const getFineDetails = async (fineId, executor = pool) => {
     FROM fine_record f
     JOIN vw_books b on f.book_id = b.book_id
     JOIN student_overview s on f.student_id = s.studentId
-    WHERE f.id = ? LIMIT 1;
+    WHERE f.id = ?;
   `;
   const [row] = await executor.execute(query, [fineId]);
-  return row.length > 0? row[0]:null;
+  return row.length > 0? row[0]: false;
 };
 
 export const markFineAsPaid = async (
@@ -333,30 +329,46 @@ export const markFineAsPaid = async (
   payment_id, 
   executor = pool
 ) => {
-  const query = `
+  const [result] = await executor.execute(`
     UPDATE fine_record
     SET 
       is_paid = 1,
       payment_method = ?,
       payment_reference = ?
-    WHERE id = ?
-  `;
+    WHERE id = ? ;`, [payment_method, payment_id, fine_id]);
 
-  await executor.execute(query, [payment_method, payment_id, fine_id]);
+  return result.affectedRows;
 };
+
+
+export const markAllFinePaid = async (
+  student_id,
+  payment_method,
+  payment_id, 
+  executor = pool) =>{
+    const [result] = await executor.execute(`
+      UPDATE fine_record
+    SET 
+      is_paid = 1,
+      payment_method = ?,
+      payment_reference = ?
+    WHERE student_id = ?`,[payment_method, payment_id, student_id]);
+
+  return result.affectedRows;
+  }
 
 export const updateStudentFineBalance = async (
   studentId,
   fineAmount,
   executor = pool
 ) => {
-  const query = `
+  const [result] = await executor.execute(`
     UPDATE student
     SET 
       fine_balance = fine_balance - ?,
       updated_at = NOW()
-    WHERE id = ?
-  `;
+    WHERE id = ? ;
+  `, [fineAmount, studentId]);
 
-  await executor.execute(query, [fineAmount, studentId]);
+  return result.affectedRows;
 };

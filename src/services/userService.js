@@ -6,7 +6,11 @@ import {
     getStudentStats, 
     updateStudent,  
     studentActivities ,
-    getUserFines
+    getUserFines,
+    getFineDetails,
+    markFineAsPaid,
+    updateStudentFineBalance,
+    markAllFinePaid
 } from "../repositories/userRepository.js";
 import pool from "../config/db.js";
 import USER_ROLES from "../constants/userRoles.js"
@@ -55,55 +59,49 @@ export const getStudentActivities = async({student_id})=>{
 };
 
 
-export const getFine = async({student_id, paidFilter , limit, page}) =>{
-
-    const safeLimit = (typeof limit === 'number' && limit > 0 && limit < 7) ? limit : 7;
-    const offset = (page - 1) * safeLimit;
+export const getFine = async({student_id, paidFilter}) =>{
 
     const is_paid = paidFilter === "paid"? 1 : 0;
 
-    const{rows , countResult} = await getUserFines(student_id, is_paid, limit, offset);
+    const{rows , countResult} = await getUserFines(student_id, is_paid);
 
-    return {records: rows, total: countResult , page, limit};
+    return {records: rows, total: countResult};
 };
 
 
 export const payFine = async ({
-    fine_id, 
-    payment_method, 
-    payment_id, 
-    amount,
-    student_id
+    fine_id, payment_method, payment_id, amount, student_id
 }) =>{
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
          const fine = await getFineDetails(fine_id, connection);
 
-        if (!fine) {
-          throw new Error("Fine not found or already paid");
-        }
-    
-        const { studentId, fine_amount } = fine;
+        if (!fine) throw new Error("Fine not found or already paid");
 
-        if(amount != fine_amount || studentId != student_id){
+        if(amount != fine.amount || fine.studentId != student_id){
             throw new Error("Not appropiate amount");
         }
 
         // 2. Mark fine as paid
-        await markFineAsPaid(
+        const rowUpdated = await markFineAsPaid(
           fine_id,
           payment_method,
           payment_id,
           connection
         );
+
+        if(!rowUpdated) throw new Error("Unable to update fine records");
     
         // 3. Update student balance
-        await updateStudentFineBalance(
-          connection,
-          studentId,
-          fine_amount
+        const result = await updateStudentFineBalance(
+          student_id,
+          amount,
+          connection
         );
+
+        if(!result) throw new Error("Student table isn't updated");
+
     
         await connection.commit();
         return { message: "Fine paid successfully" };
@@ -114,6 +112,54 @@ export const payFine = async ({
         connection.release();
     }
 };
+
+
+export const payFines = async({student_id, amount, payment_method, payment_id }) =>{
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        const {rows, countResult} = await getUserFines(student_id, 0, connection);
+
+        if(!countResult) throw new Error('Fine records not found');
+
+        const totalamount = rows.reduce((accumulator, currentvalue)=>{
+            return accumulator + Number(currentvalue.amount);
+        }, 0)
+
+        if(totalamount !== amount) {
+            console.log(totalamount , amount)
+            throw new Error("Invalid amount");}
+
+        const rowUpdated = await markAllFinePaid(
+            student_id,
+            payment_method,
+            payment_id, 
+            connection);
+        
+        if(!rowUpdated) throw new Error("Unable to update fine records");
+
+        const result = await updateStudentFineBalance(
+          student_id,
+          totalamount,
+          connection
+        );
+
+        if(!result) throw new Error("Student table isn't updated");
+
+        await connection.commit();
+
+        return { message: "All Fines are paid successfully" };
+
+        
+    } catch (error) {
+        await connection.rollback();
+        throw error;
+    }
+    finally{
+        connection.release();
+    }
+}
 
 
 export const fetchStudentStats = async({student_id}) =>{

@@ -8,6 +8,8 @@ import {
   get_user_detail,
   get_student_stats,
   update_student,
+  pay_fine,
+  pay_fines,
 } from "../controllers/users.controller.js";
 
 import { get_user_issued_books } from "../controllers/books.controller.js";
@@ -27,7 +29,8 @@ router.get("/me/stats", get_student_stats);
 router.get("/me/books", get_user_issued_books);
 router.get("/me/requests", get_requests);
 router.get("/me/fines", get_fines);
-
+router.put("/me/fines", pay_fines); 
+router.put("/me/fines/:fineId", pay_fine);  
 
 /* ---------- ADMIN / SHARED ACCESS ---------- */
 // (can later protect with RBAC middleware)
@@ -41,5 +44,7 @@ router.get("/:userId/stats", get_student_stats);
 router.get("/:userId/books", get_user_issued_books);
 router.get("/:userId/requests", get_requests);
 router.get("/:userId/fines", get_fines);
+router.put("/:userId/fines", pay_fines); 
+router.put("/:userId/fines/:fineId", pay_fine);  
 
 export default router;
