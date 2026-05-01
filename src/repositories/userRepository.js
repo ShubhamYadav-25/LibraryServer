@@ -223,7 +223,7 @@ export const studentActivities = async(studentId)=>{
         COALESCE(T.return_date, T.issue_date) DESC
     LIMIT 4;`,[studentId]);
 
-    return rows.length > 0 ? rows : null;
+    return rows.length > 0 ? rows : [];
 }
 
 

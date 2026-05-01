@@ -80,14 +80,12 @@ export const getBookRequestsbyUser = async(student_id, mode, limit, offset, exec
   query += ` LIMIT ? OFFSET ?`;
   params.push(limit, offset);
   
-  console.log(query, params);
   const [rows] = await executor.query(query, params);
 
   return rows;
 };
 
 export const getBookRequest = async(request_id, executor = pool)=>{
-  console.log(request_id);
   const [row] = await executor.query(`
     SELECT * from book_request WHERE request_id = ?;`,[request_id]);
   

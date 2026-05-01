@@ -11,11 +11,13 @@ import { fetchBooks, fetchBook,
   addBook,
   addCopies
 } from "../services/bookService.js";
-import { addRating, createComment, getComments, getRating, removeComment, updateComment } from "../services/bookReviewService.js";
+import { addRating, createComment, getComments, getRating, likeUnlikeComment, removeComment, removeRating, updateComment } from "../services/bookReviewService.js";
+import { catchAsync } from "../utils/errorHandler.js";
 
 
-export const get_books = async (req, res) => {
-  try {
+
+export const get_books = catchAsync(async (req, res) => {
+
     const user = req.user || null;
     const role = req.user?.role || "Guest"; 
 
@@ -35,34 +37,21 @@ export const get_books = async (req, res) => {
     });
 
     return res.status(200).json(data);
-
-  } catch (error) {
-    console.error("Error fetching books:", error);
-    return res.status(500).json({ error: "Server side error" });
-  }
-};
+});
 
 
-export const get_book = async (req,res) =>{
-  try {
+export const get_book = catchAsync(async (req,res) =>{
+
     const book_id = req.params?.bookId;
     const user = req.user || null;
     const role = req.user?.role || "Guest";
-    
-    if (!book_id) throw new Error("Invalid book");
 
     const book = await fetchBook({book_id, role, user});
-
     res.status(200).json(book);
-  } catch (error) {
-    console.error("Error fetching book:", error);
-    return res.status(500).json({ error: "Server side error" });
-  }
-};
+});
 
 
-export const add_book = async(req,res)=>{
-  try {
+export const add_book = catchAsync(async(req,res)=>{
     const data = req.body;
 
     const result = await addBook(data);
@@ -70,46 +59,31 @@ export const add_book = async(req,res)=>{
     res.status(200).json({
       message: result.message
     })
-
-  } catch (error) {
-    console.error("Error issuing book:", error);
-    res.status(500).json({ error: "Server side error" });
-  }
-}
+});
 
 
-export const add_copies = async(req,res)=>{
-  try {
+export const add_copies = catchAsync(async(req,res)=>{
+
     const book_id = req.params.bookId;
     const {totalCopies} = req.body;
     const message = await addCopies({book_id, totalCopies});
 
     res.status(200).json(message);
-
-  } catch (error) {
-    console.error("Error issuing book:", error);
-    res.status(500).json({ error: "Server side error" });
-  }
-}
+});
 
 
-export const renew_book = async(req,res) =>{
-  try {
+export const renew_book = catchAsync(async(req,res) =>{
     const { bookId, copyId} = req.params;
     const student_id = req.user.student_id;
 
     const message = await renewBook({copyId, student_id});
 
     res.status(200).json(message);
+});
 
-  } catch (error) {
-    console.error("Error issuing book:", error);
-    res.status(500).json({ error: "Server side error" });
-  }
-}
 
-export const issue_book = async (req, res) => {
-  try {
+export const issue_book = catchAsync(async (req, res) => {
+
     const data = req.body;
     const staff_id = req.user.id;
     const loan_period = await getBookLoanPeriod();
@@ -124,26 +98,20 @@ export const issue_book = async (req, res) => {
     res.json({
       message: "book issued successfully"
     });
-  } catch (err) {
-    console.error("Error issuing book:", err);
-    res.status(500).json({ error: "Server side error" });
-  }
-};
+});
 
 
-export const return_book = async (req,res) =>{
-  try {
+export const return_book = catchAsync(async (req,res) =>{
+
     const book = req.body;
     const student_id = req.user.student_id;
 
-    const copy_id = book?.copy_id
-    if (!copy_id) throw new Error("Invalid book");
-
+    const copy_id = book?.copy_id;
     const Returndetails = await returnBook({copy_id, student_id});
-    
+   
     // need to improve paymentDays: Returndetails.daysOverdue, 
     if(Returndetails?.fineId){
-      res.status(200).json({
+      res.status(201).json({
         message: `Book '${book?.title || ''}' returned successfully.`,
         paymentAmount: Returndetails.totalFine,
         daysOverdue: Returndetails.daysOverdue, 
@@ -154,34 +122,21 @@ export const return_book = async (req,res) =>{
         message: `Book '${book?.title || ''}' returned successfully.`,
       });
     }
-
-  } catch (error) {
-    console.error("Error issuing book:", error);
-    res.status(500).json({ error: "Server side error" });
-  }
-};
+});
 
 
-export const request_book = async (req,res) =>{
-  try {
+export const request_book = catchAsync(async (req,res) =>{
+
     const student_id = req.user.student_id;
-    // const { book } = req.body;
     const  book_id = req.params.bookId;
-    
-    if (!book_id) throw new Error("Invalid book");
 
     const message = await requestBook({ book_id, student_id});
-
     res.status(200).json(message);
-  } catch (error) {
-    console.error("Error requesting book:", error);
-    res.status(500).json({ error: "Server side error" });
-  }
-};
+});
 
 
-export const new_arrivals = async (req, res) => {
-  try {
+export const new_arrivals = catchAsync(async (req, res) => {
+
     const user = req?.user || null;
     const { page, limit } = req.query;
 
@@ -190,18 +145,12 @@ export const new_arrivals = async (req, res) => {
       page,
       limit
     });
-
     res.status(200).json({ books });
-
-  } catch (error) {
-    console.error("Error fetching new arrivals:", error);
-    res.status(500).json({ error: "Server side error" });
-  }
-};
+});
 
 
-export const trending_books = async (req, res) => {
-  try {
+export const trending_books = catchAsync(async (req, res) => {
+
     const user = req?.user || null;
     const { page, limit } = req.query;
 
@@ -210,18 +159,11 @@ export const trending_books = async (req, res) => {
       page,
       limit
     });
-
     res.status(200).json({ books });
-
-  } catch (error) {
-    console.error("Error fetching trending books:", error);
-    res.status(500).json({ error: "Server side error" });
-  }
-};
+});
 
 
-export const popular_books = async(req,res)=>{
-  try {
+export const popular_books = catchAsync(async(req,res)=>{
 
     const { page, limit } = req.query;
     const pageNum = parseInt(page) || 1;
@@ -231,149 +173,109 @@ export const popular_books = async(req,res)=>{
       page: pageNum, 
       limit: limitNum
     });
-
     res.status(200).json(books);
+});
 
-  } catch (error) {
-    console.error("Error updating config:", error);
-    res.status(500).json({
-      error: error.message || "Server error"
-    });
-  }
-}
 
-export const like_dislike_book = async (req, res) => {
-  try {
+export const like_dislike_book = catchAsync(async (req, res) => {
+
     const student_id = req.user?.student_id || null;
     const book_id = req.params.bookId || null;
-    
-    if (!book_id || !student_id) throw new Error("Invalid book");
 
     const result = await toggleBookLike({student_id, book_id});
-
     return res.status(200).json(result);
-
-  } catch (error) {
-    console.error("Error toggling book like:", error);
-    res.status(500).json({ error: "Server side error" });
-  }
-};
+});
 
 
-export const get_user_issued_books = async (req, res) => {
-  try {
+export const get_user_issued_books = catchAsync(async (req, res) => {
+
     const student_id = req.user.student_id;
-
     const books = await fetchUserIssuedBooks({ student_id });
-
     return res.status(200).json(books);
-
-  } catch (error) {
-    console.error("Error fetching issued books:", error);
-    res.status(500).json({ error: "Server side error" });
-  }
-};
+});
 
 
-export const get_overdue_books = async (req,res) =>{
-  try {
-    
+export const get_overdue_books = catchAsync(async (req,res) =>{
+
     const books = await fetchDuebooks();
-
     res.status(200).json(books);
-  } catch (error) {
-    console.error("Error fetching duebooks:", error);
-    res.status(500).json({ error: "Server side error" });
-  }
-};
+});
 
 
-export const get_comments = async(req, res)=>{
-  try {
+export const get_comments = catchAsync(async(req, res)=>{
+
     const book_id = req.params.bookId;
-
     const comments = await getComments({book_id});
-    
     res.status(200).json({comments});
-  } catch (error) {
-    console.error("Error fetching comments:", error);
-    res.status(500).json({ error: "Server side error" });
-  }
-};
+});
 
 
-export const write_comment = async (req, res) =>{
-  try {
+export const write_comment = catchAsync(async (req, res) =>{
+
     const book_id = req.params.bookId;
     const student_id = req.user.student_id;
     const { comment } = req.body;
 
     const message = await createComment({book_id, student_id, comment});
     res.status(200).json(message);
-
-  } catch (error) {
-    console.error("Error saving comments:", error);
-    res.status(500).json({ error: "Server side error" });
-  }
-}
+});
 
 
-export const update_comment = async(req,res) =>{
-  try {
+export const update_comment = catchAsync(async(req,res) =>{
     const student_id = req.user.student_id;
     const comment_id = req.params.commentId;
     const { comment } = req.body;
 
     const message = await updateComment({student_id, comment_id, comment});
     res.status(200).json(message);
-  } catch (error) {
-    console.error("Error removing comments:", error);
-    res.status(500).json({ error: "Server side error" });
-  }
-}
+});
 
 
-export const delete_comment = async (req, res) =>{
-  try {
+export const delete_comment = catchAsync(async (req, res) =>{
+
     const student_id = req.user.student_id;
     const comment_id = req.params.commentId;
-
-    const message = await removeComment({comment_id, student_id});
-    res.status(200).json(message);
-  } catch (error) {
-    console.error("Error removing comments:", error);
-    res.status(500).json({ error: "Server side error" });
-  }
-}
-
-
-export const get_book_rating = async (req,res) =>{
-  try {
     const book_id = req.params.bookId;
 
+    const message = await removeComment({comment_id, student_id, book_id});
+    res.status(200).json(message);
+});
+
+
+export const get_book_rating = catchAsync(async (req,res) =>{
+
+    const book_id = req.params.bookId;
     const ratings = await getRating(book_id);
-
     res.status(200).json(ratings);
-    
-  } catch (error) {
-    console.error("Error fetching rating:", error);
-    res.status(500).json({ error: "Server side error" });
-  }
-}
+});
 
 
-export const rate_book = async(req, res)=>{
-  try {
+export const rate_book = catchAsync(async(req, res)=>{
+
     const book_id = req.params.bookId;
     const student_id = req.user.student_id;
     const { rating } = req.body;
 
     const result = await addRating({book_id, student_id, rating});
-
     res.status(200).json(result);
+});
 
-  } catch (error) {
-    console.error("Error fetching rating:", error);
-    res.status(500).json({ error: "Server side error" });
-  }
-}
+
+export const unrate_book = catchAsync(async(req, res)=>{
+
+    const book_id = req.params.bookId;
+    const student_id = req.user.student_id;
+
+    const result = await removeRating({book_id, student_id});
+    res.status(200).json(result);
+});
+
+
+export const like_unlike_comment = catchAsync(async(req, res)=>{
+
+    const student_id = req.user.student_id;
+    const comment_id = req.params.commentId;
+
+    const message = await likeUnlikeComment({comment_id, student_id})
+    res.status(200).json(message);
+});

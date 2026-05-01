@@ -16,7 +16,7 @@ export const getReviewsbyBook = async(book_id, executor = pool)=>{
             JOIN
         student_overview s ON r.student_id = s.studentId
     WHERE
-        book_id = ?;`, [book_id]);
+        book_id = ? AND book_review IS NOT NULL;`, [book_id]);
         
   return rows.length > 0 ? rows : [];
 };
@@ -32,11 +32,13 @@ export const getReview = async(comment_id, executor = pool)=>{
 }
 
 
-export const deleteReview = async(comment_id, student_id, executor = pool)=>{
+export const deleteReview = async(comment_id, student_id, book_id, executor = pool)=>{
 
   const [result] = await executor.query(`
-    DELETE FROM reviews
-    WHERE review_id = ? AND student_id = ?;`,[comment_id, student_id]);
+    UPDATE reviews
+    SET book_review = NULL
+    WHERE review_id = ? AND student_id = ? AND book_id = ? ;
+    `,[comment_id, student_id, book_id]);
 
   return result.affectedRows;
 }
@@ -93,4 +95,31 @@ export const rateBook = async(book_id, student_id, rating, executor = pool)=>{
   );
 
   return result.insertId;
+};
+
+
+export const removeBookRating = async(review_id, executor = pool)=>{
+  const [row] = await executor.query(`
+    DELETE FROM reviews
+    where review_id = ? ;`, [review_id]);
+
+  return row.affectedRows;
+}
+
+
+export const addhelpful = async(student_id, comment_id, executor = pool)=>{
+  const [row] = await executor.query(`
+    INSERT INTO comment_likes(comment_id, student_id)
+    VALUE (?,?);`,[comment_id, student_id]);
+
+  return row.affectedRows ? row.insertId : false; 
+}
+
+
+export const removehelpful = async(student_id, comment_id, executor = pool)=>{
+  const [row] = await executor.query(`
+    DELETE FROM comment_likes
+    WHERE comment_id = ? and student_id = ?;`,[comment_id, student_id]);
+
+  return row.affectedRows; 
 }

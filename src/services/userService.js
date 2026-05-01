@@ -14,12 +14,14 @@ import {
 } from "../repositories/userRepository.js";
 import pool from "../config/db.js";
 import USER_ROLES from "../constants/userRoles.js"
+import ApiError from '../utils/errorHandler.js';
+
+
 
 export const fetchStudents = async ({page, limit, search, branch})=>{
 
     const offset = (page - 1) * limit;
     const { rows, total } = await getStudents(search, branch, limit, offset);
-
     return {rows, total}
 };
 
@@ -28,7 +30,6 @@ export const fetchStudentDetails = async(student_id)=>{
 
     let student = await getStudent(student_id);
     const books = await fetchUserIssuedBooks({student_id});
-
     student.books = books.length > 0 ? books : [];
     return student;
 };
@@ -39,7 +40,7 @@ export const updateStudentDetails = async(student_id, updates)=>{
     if(updates.branch !== undefined){
         dep_id = await getDepartmentId(updates.branch);
         if (!dep_id) {
-            throw new Error("Invalid branch name");
+            throw new ApiError(400, "The specified department/branch is invalid.");
         }
     }
     await updateStudent({
@@ -62,47 +63,37 @@ export const getStudentActivities = async({student_id})=>{
 export const getFine = async({student_id, paidFilter}) =>{
 
     const is_paid = paidFilter === "paid"? 1 : 0;
-
     const{rows , countResult} = await getUserFines(student_id, is_paid);
-
     return {records: rows, total: countResult};
 };
 
 
-export const payFine = async ({
-    fine_id, payment_method, payment_id, amount, student_id
-}) =>{
+export const payFine = async ({fine_id, payment_method, payment_id, amount, student_id}) =>{
+    
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
-         const fine = await getFineDetails(fine_id, connection);
-
-        if (!fine) throw new Error("Fine not found or already paid");
-
+        const fine = await getFineDetails(fine_id, connection);
+        if (!fine) throw new ApiError(404, "Fine record not found or it has already been settled.");
         if(amount != fine.amount || fine.studentId != student_id){
-            throw new Error("Not appropiate amount");
+            throw new ApiError(400, "Payment amount does not match the fine record.");
         }
 
-        // 2. Mark fine as paid
         const rowUpdated = await markFineAsPaid(
           fine_id,
           payment_method,
           payment_id,
           connection
         );
+        if(!rowUpdated) throw new ApiError(500, "Critical error updating fine balance", false);
 
-        if(!rowUpdated) throw new Error("Unable to update fine records");
-    
-        // 3. Update student balance
         const result = await updateStudentFineBalance(
           student_id,
           amount,
           connection
         );
+        if(!result) throw new ApiError(500, "Critical error updating fine balance", false);
 
-        if(!result) throw new Error("Student table isn't updated");
-
-    
         await connection.commit();
         return { message: "Fine paid successfully" };
     } catch (error) {
@@ -120,38 +111,30 @@ export const payFines = async({student_id, amount, payment_method, payment_id })
         await connection.beginTransaction();
 
         const {rows, countResult} = await getUserFines(student_id, 0, connection);
-
-        if(!countResult) throw new Error('Fine records not found');
-
+        if(!countResult) throw new ApiError(404, "Fine record not found");
         const totalamount = rows.reduce((accumulator, currentvalue)=>{
             return accumulator + Number(currentvalue.amount);
         }, 0)
 
-        if(totalamount !== amount) {
-            console.log(totalamount , amount)
-            throw new Error("Invalid amount");}
+        if(totalamount !== amount) throw new ApiError(400, "Payment amount does not match the fine record.");
 
         const rowUpdated = await markAllFinePaid(
             student_id,
             payment_method,
             payment_id, 
             connection);
-        
-        if(!rowUpdated) throw new Error("Unable to update fine records");
+        if(!rowUpdated) throw new ApiError(500, "Critical error updating fine balance", false);
 
         const result = await updateStudentFineBalance(
           student_id,
           totalamount,
           connection
         );
-
-        if(!result) throw new Error("Student table isn't updated");
-
+        if(!result) throw new ApiError(500, "Critical error updating fine balance", false);
         await connection.commit();
 
         return { message: "All Fines are paid successfully" };
 
-        
     } catch (error) {
         await connection.rollback();
         throw error;
@@ -159,7 +142,7 @@ export const payFines = async({student_id, amount, payment_method, payment_id })
     finally{
         connection.release();
     }
-}
+};
 
 
 export const fetchStudentStats = async({student_id}) =>{
@@ -175,12 +158,13 @@ export const fetchStudentStats = async({student_id}) =>{
         overdueBooks,
         requestedBooks
     }
-}
+};
+
 
 // need changes and modification
 export const fetchAdminDetails = async({user_id})=>{
     return user_id;
-}
+};
 
 
 export const fetchUserDetails = async (data)=>{
@@ -191,7 +175,8 @@ export const fetchUserDetails = async (data)=>{
     else{
         return fetchAdminDetails(data.id);
     }
-}
+};
+
 
 export const updateUserDetails  = async(data)=>{
     if(data.role === USER_ROLES.STUDENT){
@@ -200,4 +185,4 @@ export const updateUserDetails  = async(data)=>{
     else{
         return fetchAdminDetails(data.id);
     }
-}
+};

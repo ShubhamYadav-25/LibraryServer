@@ -1,7 +1,6 @@
 import bcrypt from "bcryptjs";
 import pool from '../config/db.js';
 import USER_ROLES from "../constants/userRoles.js";
-
 import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
 import { assignRole, 
     getRoleId,
@@ -18,33 +17,41 @@ import { getUser, getUserbyEmail,
     getStudentSeq,
     updateStudentSeq
 } from '../repositories/userRepository.js';
+import ApiError from '../utils/errorHandler.js';
+
 
 
 
 export const verifyRefreshToken = async (refreshToken) => {
-    if (!refreshToken) throw new Error("No token provided");
+    if (!refreshToken) {
+        throw new ApiError(401, "Invalid or expired session");
+    }
 
-    const parts = refreshToken.split('.');
-    if (parts.length !== 2) throw new Error("Bad format");
+    const [token_id, ...rest] = refreshToken.split('.');
+    const secret = rest.join('.');
 
-    const [token_id, secret] = parts;
+    if (!token_id || !secret) {
+        throw new ApiError(401, "Invalid or expired session");
+    }
 
     const storedToken = await getStoredToken(token_id);
-    if (!storedToken) throw new Error("Invalid token");
 
-    if(storedToken?.revoked === 1){
-        await revokeAllUserTokens(storedToken.user_id);
-        throw new Error("Token compromissed");
+    const dummyHash = "$2b$10$invalidinvalidinvalidinvalidinv";
+    const hashToCompare = storedToken?.token_hash || dummyHash;
+
+    const isValid = await bcrypt.compare(secret, hashToCompare);
+
+    if (!storedToken || !isValid) {
+        throw new ApiError(401, "Invalid or expired session");
     }
 
-    if (new Date(storedToken.expires_at) < new Date()) {
-        throw new Error("Refresh token expired");
-    }
-
-    const isValid = await bcrypt.compare(secret, storedToken.token_hash);
-
-    if (!isValid) {
-        throw new Error("Invalid token secret");
+    const now = Date.now();
+    if (
+        storedToken.revoked === 1 ||
+        new Date(storedToken.expires_at).getTime() < now
+    ) {
+        await revokeAllUserTokens(token_id); 
+        throw new ApiError(401, "Invalid or expired session");
     }
 
     return storedToken;
@@ -58,15 +65,12 @@ export const registerUser = async({firstName, lastName, email, password, role}) 
         await connection.beginTransaction()
 
         const role_id = await getRoleId(role, connection);
-
-        if(!role_id) throw new Error("Invalid role provided");
+        if(!role_id) throw new ApiError(400, "Invalid user role provided");
 
         const user_exist = await getUserbyEmail(email, connection);
-
-        if (user_exist) throw new Error("Account Already exist");
+        if (user_exist) throw new ApiError(409, "An account with this email already exists");
 
         const hashedPassword = await bcrypt.hash(password, 10);
-
         const user_id = await createUser(
             email, hashedPassword, connection
         );
@@ -95,7 +99,6 @@ export const registerUser = async({firstName, lastName, email, password, role}) 
     } catch (error) {
         await connection.rollback();
         throw error;
-        
     } finally{
         connection.release();
     }
@@ -104,18 +107,16 @@ export const registerUser = async({firstName, lastName, email, password, role}) 
 
 export const loginUser = async ({ email, password }) => {
 
+    if (!email || !password) throw new ApiError(400, "Email and password are required");
+
     const user = await getUserbyEmail(email);
-    if (!user) throw new Error("Invalid credentials");
+    if (!user) throw new ApiError(400, "Invalid credentials provided");
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) throw new Error("Invalid credentials");
-
+    if (!isMatch) throw new ApiError(400, "Invalid credentials provided");
 
     const accessToken = await getAccessToken(user.id);
-    // console.log(accessToken);
-
     const { tokenId, secret, refreshToken } = generateRefreshToken();
-
     const hash = await bcrypt.hash(secret, 10);
     await saveRefreshToken(user.id, tokenId, hash);
 
@@ -125,11 +126,10 @@ export const loginUser = async ({ email, password }) => {
 
 export const logoutUser = async ({refreshToken}) => {
 
-    const storedToken = await  verifyRefreshToken(refreshToken);
+    if (!refreshToken) throw new ApiError(400, "Refresh token is required to logout.");
+    const storedToken = await verifyRefreshToken(refreshToken);
 
-    // 🗑 delete token (logout)
     await deleteStoredToken(storedToken.id);
-
     return { message: "Logged out successfully" };
 };
 
@@ -141,24 +141,15 @@ export const changePassword = async ({user_id, oldPassword, newPassword}) => {
         await connection.beginTransaction();
 
         const user = await getUser(user_id);
-        if (!user) throw new Error("User not found");
+        if (!user) throw new ApiError(404, "User profile not found");
 
-        if (oldPassword === newPassword) {
-            throw new Error("new password should be different");
-        }
-        // 🔍 verify old password
+        if (oldPassword === newPassword) throw new ApiError(400, "New password cannot be the same as the old one.");
         const isMatch = await bcrypt.compare(oldPassword, user.password);
-        if (!isMatch) throw new Error("Incorrect old password");
+        if (!isMatch) throw new ApiError(401, "Incorrect current password.");
 
-        // 🔐 hash new password
         const newHash = await bcrypt.hash(newPassword, 10);
-
-        // 💾 update password
         await updateUserPassword(user_id, newHash, connection);
-
-        // 🚨 invalidate ALL sessions
         await revokeAllUserTokens(user_id, connection);
-
         await connection.commit();
 
         return { message: "Password changed successfully. Please login again." };
@@ -204,15 +195,14 @@ export const getAccessToken = async (userId) => {
 };
 
 
-export const tokenRefresh = async(refreshToken)=>{
+export const tokenRefresh = async({refreshToken})=>{
+    
+    if (!refreshToken) throw new ApiError(401, "Authentication required. Please provide valid credentials.");
     const storedToken = await verifyRefreshToken(refreshToken);
 
-    if(!storedToken?.user_id){
-        throw new Error("Invalid refresh token, hi");
-    }
+    if(!storedToken?.user_id)throw new ApiError(401, "Session invalid. Please log in again.");
     const newAccessToken = await getAccessToken(storedToken.user_id);
     const newRefreshToken = await rotateRefreshToken(storedToken);
 
     return {newAccessToken, newRefreshToken};
-
-}
+};

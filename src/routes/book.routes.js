@@ -11,6 +11,7 @@ import {
   get_comments,
   get_overdue_books,
   issue_book,
+  like_unlike_comment,
   like_dislike_book,
   new_arrivals,
   popular_books,
@@ -19,6 +20,7 @@ import {
   request_book,
   return_book,
   trending_books,
+  unrate_book,
   update_comment,
   write_comment,
 } from "../controllers/books.controller.js";
@@ -48,11 +50,15 @@ router.post("/:bookId/likes", like_dislike_book);
 router.post("/:bookId/requests", request_book);
 
 router.post("/:bookId/rating", rate_book);
+router.delete("/:bookId/rating", unrate_book);
+
 
 // comments
 router.post("/:bookId/comments", write_comment);
 router.put("/:bookId/comments/:commentId", update_comment);
 router.delete("/:bookId/comments/:commentId", delete_comment);
+router.post("/:bookId/comments/:commentId/like", like_unlike_comment);
+
 
 router.post("/:bookId/copy", add_copies);
 router.put("/:bookId/copy/:copyId", renew_book);

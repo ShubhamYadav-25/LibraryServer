@@ -9,6 +9,8 @@ import { cancelBookRequest,
   getBookRequests, 
   getBookRequestsbyUser,
  } from "../repositories/bookRequestRepository.js";
+import ApiError from '../utils/errorHandler.js';
+
 
 
 export const requestBook = async ({book_id, student_id})=>{
@@ -18,20 +20,18 @@ export const requestBook = async ({book_id, student_id})=>{
     await connection.beginTransaction();
     const book = await getBook(book_id);
 
-    if(!book) throw new Error("Invalid Book number");
+    if(!book) throw new ApiError(404, "The requested book does not exist.");
 
     const data = await checkBookRequestLimit(student_id, connection);
-    if(data.is_limit_reached > 0) throw new Error("Request Limit Reached");
+    if(data.is_limit_reached > 0) throw new ApiError(403, "You have reached your active book request limit.");
 
     const requested = await checkBookRequested(book_id, student_id, connection);
-    if(requested){
-      throw new Error("Book Already Requested");
-    } 
+    if(requested) throw new ApiError(400, "You have already requested this book.");
 
     const requestId = await createBookRequest(book_id, student_id, connection);
     await connection.commit();
 
-    if(!requestId) throw new Error("Request not made");
+    if(!requestId) throw new ApiError(500, "Failed to create book request", false);
 
     return {message: `Book ${book.title} requested successfully`};
   } catch (error) {
@@ -56,25 +56,21 @@ export const fetchRequest = async ({student_id, mode, page, limit}) =>{
 
   const safeLimit = (typeof limit === 'number' && limit > 0 && limit < 7) ? limit : 3;
   const offset = (page - 1) * safeLimit;
-
   const safemode = mode === 'active' ? 'active' : 'passive';
 
-  console.log(student_id, safemode, safeLimit, offset);
   return await getBookRequestsbyUser(student_id, safemode, safeLimit, offset);
 }
 
 
 export const cancelRequest = async({request_id}) =>{
 
-  const result = await cancelBookRequest(request_id);
-  if(!result) throw new Error("Request Already Served");
-  
+  const result = await cancelBookRequest(request_id);  
   return { message : "Request cancelled successfully"};
-  
-}
+};
 
 
 export const deleteRequest = async({request_id})=>{
+  
   await deleteBookRequest(request_id);
   return { message : "Request deleted successfully"}
-}
+};

@@ -4,6 +4,7 @@ import helmet from "helmet";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import { globalErrorHandler } from "./controllers/errorController.js"
 
 // Routes
 import authRouter from "./routes/auth.routes.js";
@@ -52,7 +53,7 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/books", bookRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/admin", adminRouter);
-
+app.use(globalErrorHandler);
 // Health check
 app.get("/", (req, res) => {
   res.send("Library Management Backend Running ✅");

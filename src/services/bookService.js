@@ -4,6 +4,9 @@ import { generateBookCopies } from "../utils/generateBookCopies.js";
 import USER_ROLES from "../constants/userRoles.js";
 import pool from "../config/db.js";
 import { getBookRating, getBookRatingReview } from "../repositories/reviewRepository.js";
+import { tr_initializeRating } from "../repositories/triggersRepository.js";
+import ApiError from '../utils/errorHandler.js';
+
 
 
 export const fetchBooks = async ({user, role, page, limit, searchParams}) => {
@@ -13,12 +16,10 @@ export const fetchBooks = async ({user, role, page, limit, searchParams}) => {
   let booksData = await bookRepository.getBooks(searchParams, safeLimit, offset, role);
   let liked = [];
   if(role === USER_ROLES.STUDENT){
-
     liked = await bookRepository.getUserLikedBooks(user.student_id);
   }
 
   const { books, total } = booksData;
-  // Create liked set only if needed
   const result =
     role === USER_ROLES.STUDENT
       ? attachLikedFlag(books, liked) 
@@ -47,30 +48,29 @@ export const fetchBook = async({book_id, role, user = null})=>{
   };
 
   return combined;
-
-}
+};
 
 
 export const addBook = async(data)=>{
+  
   const connection = await pool.getConnection();
-
   try {
 
     await connection.beginTransaction();
 
     const exist = await bookRepository.checkBookExistance(data.ISBN);
-    if(exist) throw new Error("Book Already exist");
+    if(exist) throw new ApiError(409, "A book with this ISBN already exists in the system.");
 
     let cat_id = await bookRepository.getCategoryId(data.genre);
     if(!cat_id){
       cat_id = await bookRepository.addCategory(data.genre);
-      if(!cat_id) throw new Error("Unable to add category");
+      if(!cat_id) throw new ApiError(500, "Failed to initialize book metadata", false);
     }
 
     let author_id = await bookRepository.getAuthorId(data.author);
     if(!author_id){
       author_id = await bookRepository.addAuthor(data.author);
-      if(!author_id) throw new Error("Unable to add author");
+      if(!author_id) throw new ApiError(500, "Failed to initialize book metadata", false);
     }
 
     const book_id = await bookRepository.addnewBook({
@@ -85,12 +85,13 @@ export const addBook = async(data)=>{
       shelf_location: data.shelf_location
     }, connection);
 
-    if(!book_id) throw new Error("Issue in adding field in Book_Detail")
+    if(!book_id) throw new ApiError(500, "Error adding book details", false);
 
+    const rating = await tr_initializeRating(book_id, connection);
     const copies = generateBookCopies(book_id, data.totalCopies || 1)
+    const copy = bookRepository.addBookCopies(copies, connection);
 
-    const final = bookRepository.addBookCopies(copies, connection);
-    if(!final) throw new Error("Unable to add book copies");
+    if(!copy) throw new ApiError(500, "Error adding book details", false);
     return { message: `Book added successfully`}
 
   } catch (error) {
@@ -99,27 +100,26 @@ export const addBook = async(data)=>{
   } finally{
     connection.release();
   }
-}
+};
 
 
 export const addCopies = async({book_id, totalCopies})=>{
 
   const last_copie_id = await bookRepository.lastaddedcopy(book_id);
 
-  if(!last_copie_id) throw new Error("Book doesn't exist");
+  if(!last_copie_id) throw new ApiError(404, "Cannot add copies to a non-existent book.");
 
   const parts = last_copie_id.split("-C");
   const p_start_num = Number(parts[1]) + 1;
 
-  if(p_start_num>30) throw new Error("Can't add more then 30 copies");
+  if(p_start_num>30) throw new ApiError(400, "Maximum physical copy limit (30) reached for this title.");
 
   const copies = generateBookCopies(book_id, totalCopies, p_start_num);
-
   const rows = await bookRepository.addBookCopies(copies)
-  if(!rows) throw new Error("Unable to add book copies")
+  if(!rows) throw new ApiError(500, "Error adding book details", false)
 
   return {message : "Copies added successfully"};
-}
+};
 
 
 export const getNewArrivals = async ({ user, page, limit }) => {
@@ -158,12 +158,13 @@ export const getPopularBooks = async({page, limit})=>{
   const limitNum = parseInt(limit) || 3;
   const offset = (pageNum - 1) * limitNum;
 
-    const books = await bookRepository.popularThisMonth(limitNum, offset);
-    if (!books || books.length === 0) {
-        return await bookRepository.getMostRatedBooks(limitNum, offset);
-    }
-    return books;
-}
+  const books = await bookRepository.popularThisMonth(limitNum, offset);
+  if (!books || books.length === 0) {
+    return await bookRepository.getMostRatedBooks(limitNum, offset);
+  }
+  return books;
+};
+
 
 export const toggleBookLike = async ({ student_id, book_id }) => {
   const connection = await pool.getConnection();

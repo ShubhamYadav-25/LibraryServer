@@ -114,7 +114,7 @@ export const getConfig = async (key, executor = pool) => {
         [key]
     );
 
-    return rows[0]?.config_value || null;
+    return rows.length > 0 ? rows[0]?.config_value : false;
 };
 
 
