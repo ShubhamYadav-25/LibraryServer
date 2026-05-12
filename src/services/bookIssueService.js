@@ -40,7 +40,7 @@ export const issueBook = async (student_id, book_id, loan_period_days,
 
     // 4️⃣ Mark copy unavailable
     await issueBookRepository.updateBookAvailability(
-        0, copy_id, connection);
+        0, copy_id, book_id, connection);
 
     // 5️⃣ Optional request fulfillment
     if (request_id) {
@@ -66,7 +66,7 @@ export const issueBook = async (student_id, book_id, loan_period_days,
 };
 
 
-export const returnBook = async ({ copy_id, student_id}) => {
+export const returnBook = async ({ copy_id, student_id, book_id}) => {
   const connection = await pool.getConnection();
 
   try {
@@ -88,7 +88,7 @@ export const returnBook = async ({ copy_id, student_id}) => {
 
     // Update book availability
     const book_result = await issueBookRepository.updateBookAvailability(
-      1, copy_id, connection);
+      1, copy_id, book_id, connection);
     if(!book_result) throw new ApiError(500, "An error occurred while updating the return. Please contact support.", false);
     
     ({daysOverdue, totalFine} = calculateLateFine(due_date));
@@ -103,7 +103,8 @@ export const returnBook = async ({ copy_id, student_id}) => {
         transaction_id,
         returnDate,
         totalFine,
-        daysOverdue
+        daysOverdue,
+        book_id
       },
       connection
     );

@@ -105,9 +105,10 @@ export const return_book = catchAsync(async (req,res) =>{
 
     const book = req.body;
     const student_id = req.user.student_id;
+    const book_id = req.params.bookId;
 
     const copy_id = book?.copy_id;
-    const Returndetails = await returnBook({copy_id, student_id});
+    const Returndetails = await returnBook({copy_id, student_id, book_id});
    
     // need to improve paymentDays: Returndetails.daysOverdue, 
     if(Returndetails?.fineId){

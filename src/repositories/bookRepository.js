@@ -312,29 +312,42 @@ export const popularThisMonth = async(limit,offset,executor = pool)=>{
   const [rows] = await executor.query(`
     SELECT 
         b.book_id,
-        b.title,
-        b.ISBN,
-        b.image,
-        b.author,
-        b.genre,
-        r.rating,
-        r.review_count,
+    
+        MAX(b.title) AS title,
+        MAX(b.ISBN) AS ISBN,
+        MAX(b.image) AS image,
+        MAX(b.author) AS author,
+        MAX(b.genre) AS genre,
+    
+        MAX(r.rating) AS rating,
+        MAX(r.review_count) AS review_count,
+    
         COUNT(bc.copy_id) AS timesIssued
-    FROM
-        book_copy bc
-            JOIN
-        vw_books b ON b.book_id = bc.book_id
-            JOIN
-        book_ratings r ON r.book_id = b.book_id
-            RIGHT JOIN
-        transaction_history t ON t.copy_id = bc.copy_id
+    
+    FROM book_copy bc
+    
+    JOIN vw_books b
+        ON b.book_id = bc.book_id
+    
+    JOIN book_ratings r
+        ON r.book_id = b.book_id
+    
+    JOIN transaction_history t
+        ON t.copy_id = bc.copy_id
+    
     WHERE
         t.issue_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
-            AND t.issue_date < DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'),
-            INTERVAL 1 MONTH)
-    GROUP BY bc.book_id
+        
+        AND t.issue_date < DATE_ADD(
+            DATE_FORMAT(CURDATE(), '%Y-%m-01'),
+            INTERVAL 1 MONTH
+        )
+    
+    GROUP BY b.book_id
+    
     ORDER BY timesIssued DESC
-    LIMIT ? OFFSET ?;`, [limit, offset]);
+    
+    LIMIT 3 OFFSET 0;`, [limit, offset]);
 
     return rows;
 }

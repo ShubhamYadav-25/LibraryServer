@@ -8,7 +8,7 @@ export const generateAccessToken = (user) => {
     return jwt.sign(
         {user},
         process.env.JWT_AUTH_TOKEN,
-        { expiresIn: '30m' }
+        { expiresIn: '5m' }
     );
 };
 

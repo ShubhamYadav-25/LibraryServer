@@ -60,12 +60,12 @@ export const insertTransaction = async (data, executor = pool) => {
 
 
 // 4️⃣ Update book availability
-export const updateBookAvailability = async (is_available, copy_id, executor = pool) => {
+export const updateBookAvailability = async (is_available, copy_id, book_id, executor = pool) => {
   const [result] = await executor.execute(
     `UPDATE BOOK_COPY
      SET is_available = ?
-     WHERE copy_id = ?`,
-    [is_available, copy_id]
+     WHERE copy_id = ? AND book_id = ?`,
+    [is_available, copy_id, book_id]
   );
 
   return result?.affectedRows || null;
@@ -117,14 +117,16 @@ export const createFineRecord = async(data, executor = pool)=>{
       fine_date,
       fine_amount,
       reason,
-      is_paid
-    ) VALUES (?, ?, ?, ?, ?, 0)`,
+      is_paid,
+      book_id
+    ) VALUES (?, ?, ?, ?, ?, 0, ?);`,
     [
       data.student_id,
       data.transaction_id,
       data.returnDate,
       data.totalFine,
-      `Overdue Penalty for ${data.daysOverdue} days`
+      `Overdue Penalty for ${data.daysOverdue} days`,
+      data.book_id
     ]
   );
 
@@ -154,7 +156,8 @@ export const getUserIssuedBooks =  async (student_id, executor = pool)=>{
       BC.copy_id,
       B.author,
       T.issue_date as issueDate,
-      T.due_date as dueDate
+      T.due_date as dueDate,
+      T.copy_id
     FROM transaction_history T
     JOIN book_copy BC ON T.copy_id = BC.copy_id
     JOIN vw_books B ON B.book_id = BC.book_id

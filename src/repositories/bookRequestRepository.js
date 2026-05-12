@@ -123,16 +123,22 @@ export const deleteBookRequest = async(request_id, executor = pool)=>{
 export const checkBookRequestLimit = async(student_id, executor = pool)=>{
   const [row] = await executor.query(`
     SELECT 
-      COUNT(*) AS active_requests,
-      sc.config_value AS max_limit,
-      CASE 
-        WHEN COUNT(*) >= sc.config_value THEN 1
-        ELSE 0
-      END AS is_limit_reached
+        COUNT(*) AS active_requests,
+    
+        MAX(sc.config_value) AS max_limit,
+    
+        CASE 
+            WHEN COUNT(*) >= MAX(sc.config_value)
+                THEN 1
+            ELSE 0
+        END AS is_limit_reached
+    
     FROM book_request br
-    JOIN system_config sc 
-      ON sc.config_key = 'MAX_BOOK_LIMIT'
-    WHERE br.is_fulfilled = 0 
+    
+    JOIN system_config sc
+        ON sc.config_key = 'MAX_BOOK_LIMIT'
+    
+    WHERE br.is_fulfilled = 0
       AND br.student_id = ?;`, [student_id]);
 
   return row.length > 0 ? row[0] : 0;
