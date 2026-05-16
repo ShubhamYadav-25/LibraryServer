@@ -1,8 +1,8 @@
 const USER_ROLES = Object.freeze({
   ADMIN: "Admin",
   LIBRARIAN: "Librarian",
+  STAFF: "Staff",
   STUDENT: "Student",
-  GUEST: "Guest",
 });
 
 export default USER_ROLES;

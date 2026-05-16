@@ -9,7 +9,8 @@ import { fetchBooks, fetchBook,
   getNewArrivals, getTrendingBooks, 
   toggleBookLike, getPopularBooks,
   addBook,
-  addCopies
+  addCopies,
+  fetchGenres
 } from "../services/bookService.js";
 import { addRating, createComment, getComments, getRating, likeUnlikeComment, removeComment, removeRating, updateComment } from "../services/bookReviewService.js";
 import { catchAsync } from "../utils/errorHandler.js";
@@ -19,7 +20,7 @@ import { catchAsync } from "../utils/errorHandler.js";
 export const get_books = catchAsync(async (req, res) => {
 
     const user = req.user || null;
-    const role = req.user?.role || "Guest"; 
+    const role = req.user?.role || null; 
 
     const { page, limit, bookName, genre } = req.query;
 
@@ -44,7 +45,7 @@ export const get_book = catchAsync(async (req,res) =>{
 
     const book_id = req.params?.bookId;
     const user = req.user || null;
-    const role = req.user?.role || "Guest";
+    const role = req.user?.role || null;
 
     const book = await fetchBook({book_id, role, user});
     res.status(200).json(book);
@@ -279,4 +280,10 @@ export const like_unlike_comment = catchAsync(async(req, res)=>{
 
     const message = await likeUnlikeComment({comment_id, student_id})
     res.status(200).json(message);
+});
+
+
+export const get_genre = catchAsync(async(req,res)=>{
+    const genres = await fetchGenres();
+    res.status(200).json(genres);
 });

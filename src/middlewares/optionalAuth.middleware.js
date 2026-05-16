@@ -10,12 +10,12 @@ export const optionalAuth = (req, res, next) => {
       return next();
     }
 
-    const payload = jwt.verify(token, process.env.JWT_AUTH_TOKEN);
+    const payload = jwt.verify(token, process.env.JWT_AUTH_TOKEN || "supersecret");
     req.user = payload.user;
 
 
     next();
-  } catch (err) {
+  } catch (error) {
     console.log("token error: ", error);
     return res.status(401).json({ message: "You are not authorized to access this resource" });
   }

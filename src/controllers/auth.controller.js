@@ -1,6 +1,8 @@
 import { loginUser, registerUser, 
     logoutUser, changePassword,
-    tokenRefresh,
+    tokenRefresh, loginWithGoogle,
+    resendVerificationEmail,
+    verifyEmailToken
 } from "../services/authService.js";
 import { generateCsrfToken } from "../utils/token.js";
 import { catchAsync } from "../utils/errorHandler.js";
@@ -41,7 +43,33 @@ export const login = catchAsync(async(req, res) => {
       path: "/"
     });
 
-    res.status(200).json({ message: 'Login successful' });
+    res.status(200).json({ message: 'Login successful', user: data.payload});
+});
+
+
+export const google_login = catchAsync(async (req, res) => {
+  const { idToken, role } = req.body;
+
+  const result = await loginWithGoogle({idToken, role});
+
+  const isProduction = process.env.NODE_ENV === "production";
+
+    res.cookie("refreshToken", result.refreshToken, {
+        httpOnly: true,
+        secure: isProduction, // HTTPS only in prod
+        sameSite: isProduction ? "none" : "lax", // "none" required for cross-site cookies
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: "/"
+    });
+    res.cookie("accessToken", result.accessToken, {
+      httpOnly: true,     // ✅ JS cannot access → protects from XSS
+      secure: isProduction,       // ✅ only over HTTPS
+      sameSite: isProduction ? "none" : "lax", // or "Lax" depending on frontend
+      maxAge: 15 * 60 * 1000, // 15 min
+      path: "/"
+    });
+
+    res.status(200).json({ message: 'Login successful' , user: result.payload});
 });
 
 
@@ -102,4 +130,32 @@ export const refresh = catchAsync(async(req, res) => {
     });
 
     return res.status(200).json({message: "token rotated successfully"});
+});
+
+
+export const resend_verification = catchAsync(async (req, res) => {
+
+    const { email } = req.body;
+
+    await resendVerificationEmail({email});
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "If the account exists, a verification email has been sent.",
+    });
+});
+
+
+export const verify_email = catchAsync(async (req, res) => {
+
+    const { token } = req.query;
+
+    await verifyEmailToken({token});
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "Email verified successfully",
+    });
 });

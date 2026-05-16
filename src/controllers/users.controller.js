@@ -41,23 +41,23 @@ export const get_students = catchAsync(async (req,res) =>{
 
 export const get_user_detail = catchAsync(async (req,res) =>{
 
-    const data = req.user;
-    const user = await fetchUserDetails(data);
-    res.status(200).json(user);
+    const user = req.user;
+    const data = await fetchUserDetails(user);
+    res.status(200).json({user : data});
 });
 
 
 export const update_student = catchAsync(async (req,res) =>{
  
-    const student_id = req.user.student_id;
-    const {name, branch, contact_no, address} = req.body;
+    const user = req.user;
+    const {name, department, phone, address} = req.body;
     const updates = {
-        name: name ?? null,
-        branch,
-        contact_no,
+        name,
+        branch: department,
+        contact_no: phone,
         address
     };
-    const message = await updateStudentDetails(student_id, updates);
+    const message = await updateStudentDetails(user, updates);
     res.status(200).json(message);
 });
 

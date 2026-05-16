@@ -184,3 +184,8 @@ export const toggleBookLike = async ({ student_id, book_id }) => {
     connection.release();
   }
 };
+
+
+export const fetchGenres = async()=>{
+  return await bookRepository.getCategory();
+}

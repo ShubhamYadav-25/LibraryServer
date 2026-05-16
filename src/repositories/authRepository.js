@@ -3,7 +3,7 @@ import pool from "../config/db.js";
 
 export const getRoleId = async (role, executor = pool)=>{
   const [row] = await executor.execute(
-    `SELECT id FROM roles WHERE name = ? LIMIT 1`,
+    `SELECT id FROM roles WHERE name = ? LIMIT 1;`,
     [role]
   );
   return row.length ? row[0].id : null;;
@@ -92,4 +92,115 @@ export const setReadCommitted = async (executor = pool) => {
   await executor.query(
     "SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED"
   );
+};
+
+
+export const linkGoogleAccount = async (user_id, google_id, executor = pool)=>{
+  const [row] = await executor.query(`
+    UPDATE users
+    SET
+        google_id = ?,
+        auth_provider =
+            CASE
+                WHEN auth_provider = 'local'
+                THEN 'hybrid'
+                ELSE auth_provider
+            END,
+        is_verified = 1
+    WHERE id = ?;`,[google_id, user_id]);
+
+  return row.affectedRows;
+};
+
+
+export const createGoogleUser = async({
+  email,
+  googleId,
+  fullName,
+}, executor = pool) =>{
+  const [row] = await executor.execute(`
+    INSERT INTO users (
+      email,
+      google_id,
+      full_name,
+      auth_provider,
+      is_verified
+    )
+    VALUES (
+      ?, ?, ?, 'google', 1 
+    );`,[email, googleId, fullName]);
+
+  return row.insertId;
+};
+
+
+export const createVerificationToken = async(
+  {
+    userId,
+    tokenHash,
+    expiresAt
+  },
+  executor = pool
+) =>{
+  const [row] = await executor.execute(`
+    INSERT INTO  email_verifications(user_id, token_hash, expires_at, verified, created_at)
+    value ( ?, ?, ?, 0, NOW());`,
+  [userId, tokenHash, expiresAt]);
+
+  return row.insertId;
+};
+
+
+export const deleteUserVerificationTokens = async(user_id, executor = pool)=>{
+  const [row] = await executor.execute(`
+    DELETE FROM email_verifications
+    WHERE user_id = ? ;`,[user_id]);
+
+  return row.affectedRows;
+}
+
+
+export const getRecentVerificationToken = async (userId, executor = pool) => {
+
+    const [rows] = await executor.execute(`
+      SELECT id
+      FROM email_verifications
+      WHERE user_id = ?
+      AND created_at >
+        DATE_SUB(NOW(), INTERVAL 60 SECOND)
+      LIMIT 1
+    `,[userId]);
+
+    return rows[0] || null;
+};
+
+
+export const getVerificationToken = async (tokenHash, executor = pool) => {
+
+    const [rows] =
+      await executor.execute(`
+      SELECT
+        id,
+        user_id,
+        token_hash,
+        expires_at,
+        verified
+      FROM email_verifications
+      WHERE token_hash = ?
+      LIMIT 1
+    `,[tokenHash]);
+
+    return rows[0] || null;
+};
+
+
+export const markUserVerified = async (userId, executor = pool) => {
+
+    const [row] = await connection.execute(`
+      UPDATE users
+      SET is_verified = 1
+      WHERE id = ?
+    `,[userId]);
+
+    return row.affectedRows;
 };

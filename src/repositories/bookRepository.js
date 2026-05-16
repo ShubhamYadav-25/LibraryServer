@@ -131,6 +131,13 @@ export const getCategoryId = async(genre, executor = pool) =>{
   return result.length > 0 ? result[0].cat_id : false;
 }
 
+export const getCategory = async(executor = pool)=>{
+  const [rows] = await executor.query(`
+    SELECT cat_name from category;`);
+
+  return rows
+}
+
 export const addCategory = async(genre, executor = pool) =>{
   const [result] = await executor.query(`
     INSERT INTO category(cat_name)

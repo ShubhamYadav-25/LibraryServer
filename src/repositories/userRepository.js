@@ -3,7 +3,22 @@ import pool from "../config/db.js"
 
 export const getUserbyEmail = async (email, executor = pool) => {
   const [row] = await executor.query(
-    `SELECT * FROM users WHERE email = ? LIMIT 1`, [email]);
+    `SELECT
+    u.id,
+    u.full_name,
+    u.password,
+    u.email,
+    u.google_id,
+    u.auth_provider,
+    u.is_verified,
+    u.created_at,
+    r.name AS role
+FROM users u
+JOIN user_roles ur
+    ON ur.user_id = u.id
+JOIN roles r
+    ON r.id = ur.role_id
+WHERE u.email = ?;`, [email]);
   return row.length > 0? row[0] : null; 
 };
 
@@ -14,19 +29,39 @@ export const getUserId = async (studentId) => {
 
 export const getUser = async (user_id, executor = pool)=>{
   const [row] = await executor.execute(
-    `SELECT * FROM users WHERE id = ? LIMIT 1`, [user_id]);
+    `SELECT
+    u.id,
+    u.full_name,
+    u.email,
+    r.name AS role
+FROM users u
+JOIN user_roles ur
+    ON ur.user_id = u.id
+JOIN roles r
+    ON r.id = ur.role_id
+WHERE u.id = ?;`, [user_id]);
 
   return row.length > 0 ? row[0]:null;
 }
 
-export const createUser = async(email, password, executor = pool) =>{
+export const createUser = async( user,  executor = pool) =>{
   const [result] = await executor.execute(
-  `INSERT INTO users (email, password, created_at)
-   VALUES (?, ?, NOW())`,
-  [email, password]
+  `INSERT INTO users (email, password, full_name, auth_provider, is_verified, created_at)
+   VALUES (?, ?, ?, ?, ? NOW());`,
+  [user.email, user.password, user.name, user.authProvider, user.isVerified]
 );
 
 return result.insertId;
+}
+
+export const updateUser = async (name, user_id, executor = pool)=>{
+  const [row] = await executor.execute(`
+    UPDATE users
+    set full_name = ?
+    where id = ? ;`, [name, user_id]);
+
+  return row.affectedRows;
+
 }
 
 export const getStudentSeq = async(startYear, executor = pool)=>{
@@ -151,22 +186,22 @@ export const updateStudent = async ({
   const fields = [];
   const values = [];
 
-  if (name !== null) {
+  if (name != null) {
     fields.push("name = ?");
     values.push(name);
   }
 
-  if (dep_id !== null) {
+  if (dep_id != null) {
     fields.push("dep_id = ?");
     values.push(dep_id);
   }
 
-  if (contact_no !== undefined) {
+  if (contact_no != null) {
     fields.push("contact_no = ?");
     values.push(contact_no);
   }
 
-  if (address !== undefined) {
+  if (address != null) {
     fields.push("address = ?");
     values.push(address);
   }
@@ -185,12 +220,8 @@ export const updateStudent = async ({
     `,
     values
   );
-
-  if (result.affectedRows === 0) {
-    throw new Error("Student not found");
-  }
+  return result.affectedRows;
 };
-
 
 export const lockStudentRow = async (student_id, executor = pool)=>{
   await executor.execute(`SELECT * FROM student WHERE id = ? FOR UPDATE;`,

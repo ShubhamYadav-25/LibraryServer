@@ -10,7 +10,9 @@ import {
     getFineDetails,
     markFineAsPaid,
     updateStudentFineBalance,
-    markAllFinePaid
+    markAllFinePaid,
+    getUser,
+    updateUser
 } from "../repositories/userRepository.js";
 import pool from "../config/db.js";
 import USER_ROLES from "../constants/userRoles.js"
@@ -35,7 +37,7 @@ export const fetchStudentDetails = async(student_id)=>{
 };
 
 
-export const updateStudentDetails = async(student_id, updates)=>{
+export const updateStudentDetails = async( user, updates)=>{
     let dep_id = null;
     if(updates.branch !== undefined){
         dep_id = await getDepartmentId(updates.branch);
@@ -43,13 +45,19 @@ export const updateStudentDetails = async(student_id, updates)=>{
             throw new ApiError(400, "The specified department/branch is invalid.");
         }
     }
-    await updateStudent({
-        student_id,
-        name : updates.name,
+    
+    if(dep_id != null || updates.contact_no != null || updates.address != null){
+        await updateStudent({
+        student_id : user.student_id,
         dep_id,
         contact_no : updates.contact_no,
         address : updates.address
-    });
+        });
+    }
+
+    if(updates.name != null){
+        await updateUser(updates.name, user.id);
+    }
 
     return {message: "Details updated successfully"}
 };
@@ -161,20 +169,19 @@ export const fetchStudentStats = async({student_id}) =>{
 };
 
 
-// need changes and modification
-export const fetchAdminDetails = async({user_id})=>{
-    return user_id;
-};
-
-
-export const fetchUserDetails = async (data)=>{
-
-    if(data.role === USER_ROLES.STUDENT){
-        return fetchStudentDetails(data.student_id);
+export const fetchUserDetails = async (user)=>{
+    let payload = {}
+    switch (user.role) {
+        case USER_ROLES.STUDENT:
+            payload = await getStudent(user.student_id);
+            break;
+        default:
+            const {id, ...rest} = await getUser(user.id);
+            payload = rest
+            break;
     }
-    else{
-        return fetchAdminDetails(data.id);
-    }
+    
+    return payload;
 };
 
 

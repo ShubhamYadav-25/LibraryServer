@@ -23,6 +23,7 @@ import {
   unrate_book,
   update_comment,
   write_comment,
+  get_genre,
 } from "../controllers/books.controller.js";
 
 const router = express.Router();
@@ -32,7 +33,8 @@ router.get("/", optionalAuth, get_books);
 router.get("/new-arrivals", optionalAuth, new_arrivals);
 router.get("/trending", optionalAuth, trending_books);
 router.get("/overdue", validateJwtToken, get_overdue_books);
-router.get("/popular", validateJwtToken, popular_books)
+router.get("/popular", validateJwtToken, popular_books);
+router.get("/genre", validateJwtToken, get_genre)
 
 router.get("/:bookId", optionalAuth, get_book);
 router.get("/:bookId/comments", get_comments);
