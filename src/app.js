@@ -2,9 +2,12 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
+import morgan from "morgan";
 import path from "path";
 import { fileURLToPath } from "url";
-import { globalErrorHandler } from "./controllers/errorController.js"
+
+import { globalErrorHandler } from "./controllers/errorController.js";
 
 // Routes
 import authRouter from "./routes/auth.routes.js";
@@ -15,48 +18,109 @@ import adminRouter from "./routes/admin.routes.js";
 const app = express();
 
 
-// Middlewares
-app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // optional
-app.use(cookieParser());
+app.set("trust proxy", 1);
+
 
 app.use(
   helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginResourcePolicy: {
+      policy: "cross-origin",
+    },
   })
 );
 
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
+}
+
+
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 mins
+  max: 100,
+  message: "Too many requests from this IP, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(globalLimiter);
+
+// Strict limiter for auth routes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: "Too many authentication attempts. Try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(express.json({ limit: "10kb" }));
+
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: "10kb",
+  })
+);
+
+app.use(cookieParser());
+
+
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  "http://localhost:5173",
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: function (origin, callback) {
+      // Allow mobile apps, Postman, server-to-server requests
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
 
-// __dirname setup
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Static files
+
 app.use(
   "/bookimages",
   express.static(path.join(__dirname, "bookimages"), {
     maxAge: "1d",
     setHeaders: (res) => {
-      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      res.setHeader(
+        "Cross-Origin-Resource-Policy",
+        "cross-origin"
+      );
     },
   })
 );
 
-// API Versioning
-app.use("/api/v1/auth", authRouter);
+app.get("/", (req, res) => {
+  res.status(200).send("Library Management Backend Running ✅");
+});
+
+app.use("/api/v1/auth", authLimiter, authRouter);
 app.use("/api/v1/books", bookRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/admin", adminRouter);
-app.use(globalErrorHandler);
-// Health check
-app.get("/", (req, res) => {
-  res.send("Library Management Backend Running ✅");
+
+app.all("*", (req, res) => {
+  res.status(404).json({
+    status: "fail",
+    message: `Can't find ${req.originalUrl} on this server`,
+  });
 });
+
+app.use(globalErrorHandler);
 
 export default app;
