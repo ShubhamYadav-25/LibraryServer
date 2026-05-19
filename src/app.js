@@ -109,12 +109,12 @@ app.get("/", (req, res) => {
   res.status(200).send("Library Management Backend Running ✅");
 });
 
-app.use("/api/v1/auth", authLimiter, authRouter);
-app.use("/api/v1/books", bookRouter);
-app.use("/api/v1/users", userRouter);
-app.use("/api/v1/admin", adminRouter);
+app.use("/v1/auth", authLimiter, authRouter);
+app.use("/v1/books", bookRouter);
+app.use("/v1/users", userRouter);
+app.use("/v1/admin", adminRouter);
 
-app.all("*", (req, res) => {
+app.use((req, res) => {
   res.status(404).json({
     status: "fail",
     message: `Can't find ${req.originalUrl} on this server`,
