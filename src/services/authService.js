@@ -13,6 +13,10 @@ import ApiError from '../utils/errorHandler.js';
 import { verifyGoogleToken } from '../utils/googleAuth.js'
 import { sendEmail } from "../utils/email.js";
 import { verificationTemplate, welcomeTemplate } from "../constants/mailTemplate.js";
+import crypto from 'crypto';
+
+
+
 
 const normalizeRequestedRole = (role) => {
     const normalizedRole = String(role || "").trim().toLowerCase();
@@ -103,7 +107,7 @@ export const registerUser = async({firstName, lastName, email, password, role}) 
                 const id = `STU${startYear}${String(newSeq).padStart(3, '0')}`;
                 const batch = `${startYear}-${String(startYear + 4).slice(-2)}`;
                 
-                await createStudent(user_id, id, name, batch, connection);
+                await createStudent(user_id, id, batch, connection);
                 await updateStudentSeq(newSeq,startYear,connection);
                 break;
 
@@ -112,7 +116,7 @@ export const registerUser = async({firstName, lastName, email, password, role}) 
         }
 
         const rawVerificationToken = generateCsrfToken();
-        const hashedVerificationToken = await bcrypt.hash(rawVerificationToken);
+        const hashedVerificationToken = crypto.createHash("sha256").update(rawVerificationToken).digest("hex");
         const expiresAt = new Date( Date.now() + 1000 * 60 * 15); // 15 min
 
         await authRepository.createVerificationToken(
@@ -123,8 +127,6 @@ export const registerUser = async({firstName, lastName, email, password, role}) 
         },
             connection
         );
-
-        await connection.commit();
         
         const verificationUrl =`${process.env.FRONTEND_URL}` + `/verify-email?token=${rawVerificationToken}`;
 
@@ -136,6 +138,8 @@ export const registerUser = async({firstName, lastName, email, password, role}) 
             verificationUrl,
           }),
         });
+
+        await connection.commit();
 
         return {
           success: true,
@@ -187,17 +191,24 @@ export const logoutUser = async ({refreshToken}) => {
 };
 
 
-export const changePassword = async ({user_id, oldPassword, newPassword}) => {
+export const changePassword = async ({user_id, currentPassword, newPassword}) => {
 
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
-
+        
         const user = await getUser(user_id);
         if (!user) throw new ApiError(404, "User profile not found");
 
-        if (oldPassword === newPassword) throw new ApiError(400, "New password cannot be the same as the old one.");
-        const isMatch = await bcrypt.compare(oldPassword, user.password);
+        if (currentPassword === newPassword ){ 
+            throw new ApiError(400, "New password cannot be the same as the old one.");
+        }
+        
+        if(user.auth_provider === "google"){
+            throw new ApiError(404, "Can't change password for google logged users.")
+        }
+        
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
         if (!isMatch) throw new ApiError(401, "Incorrect current password.");
 
         const newHash = await bcrypt.hash(newPassword, 10);
@@ -435,10 +446,12 @@ export const resendVerificationEmail = async ({email}) => {
     const connection = await pool.getConnection();
 
     try {
-
+      await connection.beginTransaction();
       const user = await getUserbyEmail( email, connection);
 
-      if (!user) throw new ApiError(400, "User doesn't exist, Plz Sign up");
+      if (!user) {
+        return ;
+      }
 
       if (user.is_verified) {
         return;
@@ -455,11 +468,11 @@ export const resendVerificationEmail = async ({email}) => {
       }
 
       const rawToken = generateCsrfToken();
-      const tokenHash = await bcrypt.hash(rawToken);
+      const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
 
       const expiresAt = new Date( Date.now() + 1000 * 60 * 15);
 
-      await authRepository.deleteUserVerificationToken(
+      await authRepository.deleteUserVerificationTokens(
         user.id,
         connection
       );
@@ -491,12 +504,15 @@ export const resendVerificationEmail = async ({email}) => {
 
       } catch (error) {
 
+        await connection.rollback();
         console.error(
           "Resend verification email failed:",
           error
         );
         throw error
       }
+
+      await connection.commit();
 
       return {
         success: true,
@@ -512,8 +528,8 @@ export const resendVerificationEmail = async ({email}) => {
 };
 
 
-export const verifyEmailToken = async ({rawToken}) => {
-
+export const verifyEmailToken = async (rawToken) => {
+    
     if (!rawToken) throw new ApiError(400,"Invalid verification link");
     
     const connection = await pool.getConnection();
@@ -522,7 +538,7 @@ export const verifyEmailToken = async ({rawToken}) => {
 
       await connection.beginTransaction();
 
-      const tokenHash =  await bcrypt.hash(rawToken);
+      const tokenHash =  crypto.createHash("sha256").update(rawToken).digest("hex");
 
       const verificationRecord = await authRepository.getVerificationToken(tokenHash, connection);
 

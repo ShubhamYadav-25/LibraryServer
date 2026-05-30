@@ -75,10 +75,10 @@ export const google_login = catchAsync(async (req, res) => {
 
 export const reset_password = catchAsync(async(req, res) =>{
 
-    const {oldPassword, newPassword} = req.body;
+    const {currentPassword, newPassword} = req.body;
     const user_id = req.user?.id || null;
 
-    const result = await changePassword({user_id, oldPassword, newPassword});
+    const result = await changePassword({user_id, currentPassword, newPassword});
     return res.status(200).json(result);
 });
 
@@ -149,9 +149,8 @@ export const resend_verification = catchAsync(async (req, res) => {
 
 export const verify_email = catchAsync(async (req, res) => {
 
-    const { token } = req.query;
-
-    await verifyEmailToken({token});
+    const { token } = req.body;
+    await verifyEmailToken(token);
 
     return res.status(200).json({
       success: true,

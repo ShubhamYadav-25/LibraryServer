@@ -33,6 +33,7 @@ export const getUser = async (user_id, executor = pool)=>{
     u.id,
     u.full_name,
     u.email,
+    u.password,
     r.name AS role
 FROM users u
 JOIN user_roles ur
@@ -45,9 +46,10 @@ WHERE u.id = ?;`, [user_id]);
 }
 
 export const createUser = async( user,  executor = pool) =>{
+
   const [result] = await executor.execute(
   `INSERT INTO users (email, password, full_name, auth_provider, is_verified, created_at)
-   VALUES (?, ?, ?, ?, ? NOW());`,
+   VALUES (?, ?, ?, ?, ?, NOW());`,
   [user.email, user.password, user.name, user.authProvider, user.isVerified]
 );
 
@@ -94,10 +96,10 @@ export const updateStudentSeq = async(newSeq, startYear, executor = pool)=>{
 }
 
 
-export const createStudent = async (user_id, id, name, batch, executor = pool)=>{
+export const createStudent = async (user_id, id, batch, executor = pool)=>{
   const [row] = await executor.execute(
-    `INSERT INTO student (user_id, id, name, batch) VALUES (?, ?, ?, ?)`,
-    [user_id, id, name, batch]
+    `INSERT INTO student (user_id, id, batch) VALUES (?, ?, ?)`,
+    [user_id, id, batch]
   );
 
   return row.insertId;

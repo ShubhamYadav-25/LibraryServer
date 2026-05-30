@@ -196,7 +196,7 @@ export const getVerificationToken = async (tokenHash, executor = pool) => {
 
 export const markUserVerified = async (userId, executor = pool) => {
 
-    const [row] = await connection.execute(`
+    const [row] = await executor.execute(`
       UPDATE users
       SET is_verified = 1
       WHERE id = ?
