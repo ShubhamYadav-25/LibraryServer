@@ -44,15 +44,6 @@ const globalLimiter = rateLimit({
 
 app.use(globalLimiter);
 
-// Strict limiter for auth routes
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: "Too many authentication attempts. Try again later.",
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
 app.use(express.json({ limit: "10kb" }));
 
 app.use(
@@ -109,7 +100,7 @@ app.get("/", (req, res) => {
   res.status(200).send("Library Management Backend Running ✅");
 });
 
-app.use("/v1/auth", authLimiter, authRouter);
+app.use("/v1/auth", authRouter);
 app.use("/v1/books", bookRouter);
 app.use("/v1/users", userRouter);
 app.use("/v1/admin", adminRouter);

@@ -92,7 +92,9 @@ export const returnBook = async ({ copy_id, student_id, book_id}) => {
     if(!book_result) throw new ApiError(500, "An error occurred while updating the return. Please contact support.", false);
     
     ({daysOverdue, totalFine} = calculateLateFine(due_date));
+
     if(daysOverdue == 0){
+      await connection.commit();
       return {message: "Returned on time"}
     }
 
