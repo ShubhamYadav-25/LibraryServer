@@ -163,6 +163,8 @@ export const loginUser = async ({ email, password }) => {
     const user = await getUserbyEmail(email);
     if (!user) throw new ApiError(400, "Invalid credentials provided");
 
+    if(!user.is_verified) throw new ApiError(400, "plz verify your gmail" );
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new ApiError(400, "Invalid credentials provided");
 

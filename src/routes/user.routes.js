@@ -39,7 +39,6 @@ router.get("/:userId", get_user_detail);
 router.put("/:userId", update_student);
 
 router.get("/:userId/activities", get_student_activities);
-router.get("/:userId/stats", get_student_stats);
 
 router.get("/:userId/books", get_user_issued_books);
 router.get("/:userId/requests", get_requests);

@@ -37,7 +37,7 @@ export const fetchStudentDetails = async(student_id)=>{
 };
 
 
-export const updateStudentDetails = async( user, updates)=>{
+export const updateStudentDetails = async( {user, updates, student_id})=>{
     let dep_id = null;
     if(updates.branch !== undefined){
         dep_id = await getDepartmentId(updates.branch);
@@ -48,7 +48,7 @@ export const updateStudentDetails = async( user, updates)=>{
     
     if(dep_id != null || updates.contact_no != null || updates.address != null){
         await updateStudent({
-        student_id : user.student_id,
+        student_id,
         dep_id,
         contact_no : updates.contact_no,
         address : updates.address
@@ -169,27 +169,25 @@ export const fetchStudentStats = async({student_id}) =>{
 };
 
 
-export const fetchUserDetails = async (user)=>{
+export const fetchUserDetails = async ({user, student_id})=>{
     let payload = {}
     switch (user.role) {
         case USER_ROLES.STUDENT:
             payload = await getStudent(user.student_id);
             break;
+        case USER_ROLES.ADMIN:
+            if(student_id !== undefined){
+                payload = await getStudent(student_id);
+            }else{
+                const {id, password, ...rest} = await getUser(user.id);
+                payload = rest
+            }
+            break;
         default:
-            const {id, ...rest} = await getUser(user.id);
+            const {id, password, ...rest} = await getUser(user.id);
             payload = rest
             break;
     }
     
     return payload;
-};
-
-
-export const updateUserDetails  = async(data)=>{
-    if(data.role === USER_ROLES.STUDENT){
-        return updateStudentDetails(data.student_id);
-    }
-    else{
-        return fetchAdminDetails(data.id);
-    }
 };
