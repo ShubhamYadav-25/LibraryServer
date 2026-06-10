@@ -75,6 +75,12 @@ export const verifyRefreshToken = async (refreshToken) => {
 export const registerUser = async({firstName, lastName, email, password, role}) =>{
     const connection = await pool.getConnection();
     const name = `${firstName} ${lastName}`;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const rawVerificationToken = generateCsrfToken();
+    const hashedVerificationToken = crypto.createHash("sha256").update(rawVerificationToken).digest("hex");
+    const expiresAt = new Date( Date.now() + 1000 * 60 * 15); // 15 min
+
+
     const normalizedRole = normalizeRequestedRole(role);
     try {
         await connection.beginTransaction()
@@ -85,7 +91,6 @@ export const registerUser = async({firstName, lastName, email, password, role}) 
         const user_exist = await getUserbyEmail(email, connection);
         if (user_exist) throw new ApiError(409, "An account with this email already exists");
 
-        const hashedPassword = await bcrypt.hash(password, 10);
         const user_id = await createUser(
         {
           email,
@@ -115,10 +120,6 @@ export const registerUser = async({firstName, lastName, email, password, role}) 
                 break;
         }
 
-        const rawVerificationToken = generateCsrfToken();
-        const hashedVerificationToken = crypto.createHash("sha256").update(rawVerificationToken).digest("hex");
-        const expiresAt = new Date( Date.now() + 1000 * 60 * 15); // 15 min
-
         await authRepository.createVerificationToken(
         {
           userId: user_id,
@@ -127,6 +128,7 @@ export const registerUser = async({firstName, lastName, email, password, role}) 
         },
             connection
         );
+        await connection.commit();
         
         const verificationUrl =`${process.env.FRONTEND_URL}` + `/verify-email?token=${rawVerificationToken}`;
 
@@ -138,8 +140,6 @@ export const registerUser = async({firstName, lastName, email, password, role}) 
             verificationUrl,
           }),
         });
-
-        await connection.commit();
 
         return {
           success: true,
