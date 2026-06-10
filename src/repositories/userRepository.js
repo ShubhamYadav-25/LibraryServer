@@ -97,7 +97,7 @@ export const updateStudentSeq = async(newSeq, startYear, executor = pool)=>{
 
 
 export const createStudent = async (user_id, id, batch, executor = pool)=>{
-  const [row] = await executor.execute(
+  const [row] = await executor.query(
     `INSERT INTO student (user_id, id, batch) VALUES (?, ?, ?)`,
     [user_id, id, batch]
   );
