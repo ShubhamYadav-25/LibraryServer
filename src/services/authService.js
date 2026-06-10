@@ -149,6 +149,7 @@ export const registerUser = async({firstName, lastName, email, password, role}) 
 
     } catch (error) {
         await connection.rollback();
+        console.log(error)
         throw error;
     } finally{
         connection.release();
@@ -277,6 +278,13 @@ export const tokenRefresh = async({refreshToken})=>{
 export const loginWithGoogle = async ({ idToken, role }) => {
     const googleUser = await verifyGoogleToken(idToken);
     const normalizedRole = role ? normalizeRequestedRole(role) : null;
+    const {
+            tokenId,
+            secret,
+            refreshToken,
+        } = generateRefreshToken();
+
+    const hash = await bcrypt.hash(secret, 10);
 
     const connection = await pool.getConnection();
 
@@ -347,7 +355,6 @@ export const loginWithGoogle = async ({ idToken, role }) => {
                     await createStudent(
                         userId,
                         studentId,
-                        googleUser.fullName,
                         batch,
                         connection
                     );
@@ -404,14 +411,6 @@ export const loginWithGoogle = async ({ idToken, role }) => {
             user.role
         );
 
-        const {
-            tokenId,
-            secret,
-            refreshToken,
-        } = generateRefreshToken();
-
-        const hash = await bcrypt.hash(secret, 10);
-
         await authRepository.saveRefreshToken(
             user.id,
             tokenId,
@@ -435,6 +434,7 @@ export const loginWithGoogle = async ({ idToken, role }) => {
         if (transactionStarted) {
             await connection.rollback();
         }
+        console.log(error)
         throw error;
 
     } finally {
