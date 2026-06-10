@@ -42,8 +42,9 @@ export const get_students = catchAsync(async (req,res) =>{
 export const get_user_detail = catchAsync(async (req,res) =>{
 
     const user = req.user;
-    const data = await fetchUserDetails(user);
-    res.status(200).json({user : data});
+    const student_id = req.params.userId || req.user.student_id;
+    const data = await fetchUserDetails({user, student_id});
+    res.status(200).json(data);
 });
 
 
@@ -51,35 +52,21 @@ export const update_student = catchAsync(async (req,res) =>{
  
     const user = req.user;
     const {name, department, phone, address} = req.body;
+    const student_id = req.params.userId || req.user.student_id;
     const updates = {
         name,
         branch: department,
         contact_no: phone,
         address
     };
-    const message = await updateStudentDetails(user, updates);
+    const message = await updateStudentDetails({user, updates, student_id});
     res.status(200).json(message);
 });
-
-// pending need to complete
-// export const delete_user = async (req,res) =>{
-  
-//     const {student_id} = String(req.params.studentId);
-//     if (String(student_id) !== req.user.student_id) {
-//         return res.status(403).json({ error: "Unauthorized access" });
-//     }
- 
-// }
-
-// pending need to complete
-// export const user_notification = async (req,res) =>{
-
-// }
 
 
 export const get_fines = catchAsync(async (req, res) => {
  
-    const student_id  = req.user.student_id;
+    const student_id  = req.params.userId || req.user.student_id;
     const { status, limit, page } = req.query;
     const pageNum = Math.max(Number(page) || 1, 1);
     const limitNum = Math.min(Math.max(Number(limit) || 7, 1), 50);
@@ -98,7 +85,7 @@ export const get_fines = catchAsync(async (req, res) => {
 export const pay_fine = catchAsync(async (req,res) =>{
  
     const { fine_id, payment_method, payment_id, amount} = req.body;
-    const student_id = req.user.student_id;
+    const student_id = req.params.userId || req.user.student_id;
 
     const message = await payFine({fine_id, payment_method, payment_id, amount, student_id});
     res.status(200).json(message);
@@ -107,7 +94,7 @@ export const pay_fine = catchAsync(async (req,res) =>{
 
 export const pay_fines = catchAsync(async(req, res)=>{
   
-    const student_id = req.user.student_id;
+    const student_id = req.params.userId || req.user.student_id;
     const { payment_method, payment_id, amount} = req.body;
 
     const message = await payFines({student_id, payment_method, payment_id, amount});
@@ -117,7 +104,7 @@ export const pay_fines = catchAsync(async(req, res)=>{
 
 export const get_student_activities = catchAsync(async (req,res) =>{
  
-    const student_id = req.user.student_id;
+    const student_id = req.user.student_id || req.params.userId;
     const activities = await getStudentActivities({student_id});
     res.status(200).json({activities})
 });
@@ -150,7 +137,7 @@ export const get_all_requests = catchAsync(async (req, res) =>{
 
 export const get_requests = catchAsync(async (req, res) =>{
 
-    const student_id = req.user.student_id;
+    const student_id = req.user.student_id || req.user.student_id;
     const {page, limit, mode}  = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 7;

@@ -9,6 +9,7 @@ import { cancelBookRequest,
   getBookRequests, 
   getBookRequestsbyUser,
  } from "../repositories/bookRequestRepository.js";
+import { lockStudentRow } from "../repositories/userRepository.js";
 import ApiError from '../utils/errorHandler.js';
 
 
@@ -18,6 +19,8 @@ export const requestBook = async ({book_id, student_id})=>{
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
+    await lockStudentRow(student_id, connection);
+    
     const book = await getBook(book_id);
 
     if(!book) throw new ApiError(404, "The requested book does not exist.");

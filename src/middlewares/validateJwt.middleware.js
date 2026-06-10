@@ -8,7 +8,7 @@ export const validateJwtToken = (req, res, next) => {
 
     if (!token) throw new Error("access token missing");
 
-    const jwtSecret = process.env.JWT_AUTH_TOKEN || "supersecret";
+    const jwtSecret = process.env.JWT_AUTH_TOKEN ;
     const payload = jwt.verify(token, jwtSecret);
     req.user = payload.user;
     

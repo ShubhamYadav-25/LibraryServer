@@ -57,7 +57,7 @@ router.post(
   google_login
 );
 
-router.get(
+router.post(
   "/verify-email",
   verifyEmailLimiter,
   verifyEmailValidator,

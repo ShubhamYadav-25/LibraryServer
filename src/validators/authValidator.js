@@ -70,20 +70,15 @@ export const resendMailValidator = [
 
 export const verifyEmailValidator = [
 
-  query("token")
-    .trim()
-    .notEmpty()
-    .withMessage(
-      "Verification token required"
-    )
+  body("token")
+  .notEmpty()
+  .withMessage("Verification token required")
+  .bail()
 
-    .isLength({ min: 64, max: 64 })
-    .withMessage(
-      "Invalid verification token"
-    )
+  .isLength({ min: 64, max: 64 })
+  .withMessage("Invalid verification token")
+  .bail()
 
-    .matches(/^[a-f0-9]+$/i)
-    .withMessage(
-      "Invalid verification token"
-    ),
+  .matches(/^[a-f0-9]+$/i)
+  .withMessage("Invalid verification token"),
 ];

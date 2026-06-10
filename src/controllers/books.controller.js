@@ -191,7 +191,7 @@ export const like_dislike_book = catchAsync(async (req, res) => {
 
 export const get_user_issued_books = catchAsync(async (req, res) => {
 
-    const student_id = req.user.student_id;
+    const student_id = req.params.userId || req.user.student_id;
     const books = await fetchUserIssuedBooks({ student_id });
     return res.status(200).json(books);
 });
