@@ -89,7 +89,7 @@ export const getBookRatingReview = async (book_id, student_id, executor = pool)=
 
 
 export const rateBook = async(book_id, student_id, rating, executor = pool)=>{
-  const [result] = await executor.query(
+  const [result] = await executor.execute(
     `INSERT INTO reviews(book_id,student_id, rating ,created_at)
     VALUES (?,?,?,NOW())`,[book_id, student_id, rating]
   );
