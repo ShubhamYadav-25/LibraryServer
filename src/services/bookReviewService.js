@@ -69,6 +69,7 @@ export const addRating = async({book_id, student_id, rating})=>{
         const result = await tr_updateRatingAfterReviewInsert(book_id, rating, connection)
         if(!result) throw new ApiError(500, "Internal error updating book rating", false);
         
+        await connection.commit()
         return { message: "Book rated successfully"};
             
     } catch (error) {
@@ -94,6 +95,8 @@ export const removeRating = async({book_id, student_id})=>{
     
         const result = await tr_updateRatingAfterReviewDelete(book_id, review.my_rating, connection)
         if(!result) throw new ApiError(500, "Internal error updating book rating", false);
+
+        await connection.commit()
         
         return { message: "Book unrated successfully"};
             
@@ -125,6 +128,8 @@ export const likeUnlikeComment = async({student_id, comment_id})=>{
 
         const result = await tr_removeLikeonComment(comment_id, connection)
         if(!result) throw new ApiError(500, "Internal error updating like on comment", false);
+
+        await connection.commit()
         
         return {message: "comment unliked successfully"}
         

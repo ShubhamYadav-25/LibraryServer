@@ -79,6 +79,7 @@ export const registerUser = async({firstName, lastName, email, password, role}) 
     const rawVerificationToken = generateCsrfToken();
     const hashedVerificationToken = crypto.createHash("sha256").update(rawVerificationToken).digest("hex");
     const expiresAt = new Date( Date.now() + 1000 * 60 * 15); // 15 min
+    const verificationUrl =`${process.env.FRONTEND_URL}` + `/verify-email?token=${rawVerificationToken}`;
 
 
     const normalizedRole = normalizeRequestedRole(role);
@@ -130,8 +131,6 @@ export const registerUser = async({firstName, lastName, email, password, role}) 
         );
         await connection.commit();
         
-        const verificationUrl =`${process.env.FRONTEND_URL}` + `/verify-email?token=${rawVerificationToken}`;
-
         await sendEmail({
           to: email,
           subject: "Verify your email",
@@ -451,12 +450,9 @@ export const resendVerificationEmail = async ({email}) => {
       await connection.beginTransaction();
       const user = await getUserbyEmail( email, connection);
 
-      if (!user) {
+      if (!user || user.is_verified) {
+        await connection.commit();
         return ;
-      }
-
-      if (user.is_verified) {
-        return;
       }
 
       const recentToken =
@@ -466,6 +462,7 @@ export const resendVerificationEmail = async ({email}) => {
         );
 
       if (recentToken) {
+        await connection.commit();
         return;
       }
 
