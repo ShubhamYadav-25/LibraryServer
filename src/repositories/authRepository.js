@@ -30,10 +30,36 @@ export const getUserPermissions = async (userId, executor = pool) => {
     SELECT DISTINCT p.code 
     FROM permissions p
     JOIN role_permissions rp ON rp.permission_id = p.id
-    WHERE rp.role_id = ?
+    JOIN user_roles ur ON ur.role_id = rp.role_id
+    WHERE ur.user_id = ?
   `, [userId]);
 
   return rows.map(r => r.code);
+};
+
+
+export const getRolePermissions = async (roleName, executor = pool) => {
+  const [rows] = await executor.query(`
+    SELECT DISTINCT p.code 
+    FROM permissions p
+    JOIN role_permissions rp ON rp.permission_id = p.id
+    JOIN roles r ON r.id = rp.role_id
+    WHERE LOWER(r.name) = LOWER(?)
+  `, [roleName]);
+
+  return rows.map(r => r.code);
+};
+
+
+export const getAllRolePermissions = async (executor = pool) => {
+  const [rows] = await executor.query(`
+    SELECT r.name AS role_name, p.code AS permission_code
+    FROM roles r
+    JOIN role_permissions rp ON rp.role_id = r.id
+    JOIN permissions p ON p.id = rp.permission_id
+  `);
+
+  return rows;
 };
 
 

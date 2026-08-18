@@ -1,6 +1,9 @@
 import express from "express";
 import { validateJwtToken } from "../middlewares/validateJwt.middleware.js";
-import { optionalAuth } from "../middlewares/optionalAuth.middleware.js"
+import { optionalAuth } from "../middlewares/optionalAuth.middleware.js";
+import { checkPermission } from "../middlewares/rbac.middleware.js";
+import PERMISSIONS from "../constants/permissions.js";
+
 import {
   add_book,
   add_copies,
@@ -32,10 +35,13 @@ const router = express.Router();
 router.get("/", optionalAuth, get_books);
 router.get("/new-arrivals", optionalAuth, new_arrivals);
 router.get("/trending", optionalAuth, trending_books);
-router.get("/overdue", validateJwtToken, get_overdue_books);
-router.get("/popular", validateJwtToken, popular_books);
-router.get("/genre", validateJwtToken, get_genre)
+router.get("/popular", optionalAuth, popular_books);
+router.get("/genre", optionalAuth, get_genre);
 
+/* ---------- OVERDUE (ADMIN/STAFF VIEW) ---------- */
+router.get("/overdue", validateJwtToken, checkPermission(PERMISSIONS.VIEW_REPORTS), get_overdue_books);
+
+/* ---------- INDIVIDUAL BOOK (PUBLIC / OPTIONAL AUTH) ---------- */
 router.get("/:bookId", optionalAuth, get_book);
 router.get("/:bookId/comments", get_comments);
 router.get("/:bookId/rating", get_book_rating);
@@ -43,26 +49,26 @@ router.get("/:bookId/rating", get_book_rating);
 /* ---------- PROTECTED ROUTES ---------- */
 router.use(validateJwtToken);
 
-// actions (state changes)
-router.post("/",add_book);
+/* ---------- CATALOG & INVENTORY (ADMIN / LIBRARIAN) ---------- */
+router.post("/", checkPermission(PERMISSIONS.ADD_BOOK), add_book);
+router.post("/:bookId/copy", checkPermission(PERMISSIONS.ADD_BOOK), add_copies);
 
-router.post("/:bookId/issues", issue_book);
-router.patch("/:bookId/returns", return_book);
+/* ---------- CIRCULATION DESK (ADMIN / LIBRARIAN / STAFF) ---------- */
+router.post("/:bookId/issues", checkPermission(PERMISSIONS.ISSUE_BOOK), issue_book);
+router.patch("/:bookId/returns", checkPermission(PERMISSIONS.RETURN_BOOK), return_book);
+router.put("/:bookId/copy/:copyId", checkPermission(PERMISSIONS.ISSUE_BOOK), renew_book);
+
+/* ---------- STUDENT BOOK REQUESTS ---------- */
+router.post("/:bookId/requests", checkPermission(PERMISSIONS.RESERVE_BOOK), request_book);
+
+/* ---------- SOCIAL, RATINGS & REVIEWS (AUTHENTICATED) ---------- */
 router.post("/:bookId/like", like_dislike_book);
-router.post("/:bookId/requests", request_book);
-
 router.post("/:bookId/rating", rate_book);
 router.delete("/:bookId/rating", unrate_book);
 
-
-// comments
 router.post("/:bookId/comments", write_comment);
 router.put("/:bookId/comments/:commentId", update_comment);
 router.delete("/:bookId/comments/:commentId", delete_comment);
 router.post("/:bookId/comments/:commentId/like", like_unlike_comment);
-
-
-router.post("/:bookId/copy", add_copies);
-router.put("/:bookId/copy/:copyId", renew_book);
 
 export default router;

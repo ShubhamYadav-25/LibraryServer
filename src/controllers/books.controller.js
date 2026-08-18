@@ -17,10 +17,7 @@ import { catchAsync } from "../utils/errorHandler.js";
 
 
 
-export const get_books = catchAsync(async (req, res) => {
-
-    const user = req.user || null;
-    const role = req.user?.role || null; 
+export const get_books = catchAsync(async (req, res) => { 
 
     const { page, limit, bookName, genre } = req.query;
 
@@ -29,9 +26,7 @@ export const get_books = catchAsync(async (req, res) => {
 
     const searchParams = { bookName, genre };
 
-    const data = await fetchBooks({
-      user,
-      role, 
+    const data = await fetchBooks({ 
       page: pageNum,
       limit: limitNum,
       searchParams,

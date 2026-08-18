@@ -1,5 +1,7 @@
 import express from "express";
 import { validateJwtToken } from "../middlewares/validateJwt.middleware.js";
+import { checkPermission } from "../middlewares/rbac.middleware.js";
+import PERMISSIONS from "../constants/permissions.js";
 
 import {
   get_fines,
@@ -19,7 +21,7 @@ const router = express.Router();
 // All user routes require login
 router.use(validateJwtToken);
 
-/* ---------- CURRENT USER (SAFE) ---------- */
+/* ---------- CURRENT USER (SAFE / SELF-SERVICE) ---------- */
 router.get("/me", get_user_detail);
 router.put("/me", update_student);
 
@@ -29,11 +31,11 @@ router.get("/me/stats", get_student_stats);
 router.get("/me/books", get_user_issued_books);
 router.get("/me/requests", get_requests);
 router.get("/me/fines", get_fines);
-router.put("/me/fines", pay_fines); 
-router.put("/me/fines/:fineId", pay_fine);  
+router.put("/me/fines", pay_fines);
+router.put("/me/fines/:fineId", pay_fine);
 
-/* ---------- ADMIN / SHARED ACCESS ---------- */
-// (can later protect with RBAC middleware)
+/* ---------- ADMIN / PRIVILEGED USER MANAGEMENT ---------- */
+router.use("/:userId", checkPermission(PERMISSIONS.MANAGE_USERS));
 
 router.get("/:userId", get_user_detail);
 router.put("/:userId", update_student);
@@ -43,7 +45,7 @@ router.get("/:userId/activities", get_student_activities);
 router.get("/:userId/books", get_user_issued_books);
 router.get("/:userId/requests", get_requests);
 router.get("/:userId/fines", get_fines);
-router.put("/:userId/fines", pay_fines); 
-router.put("/:userId/fines/:fineId", pay_fine);  
+router.put("/:userId/fines", pay_fines);
+router.put("/:userId/fines/:fineId", pay_fine);
 
 export default router;

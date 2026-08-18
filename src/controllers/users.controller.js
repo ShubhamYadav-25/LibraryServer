@@ -113,6 +113,7 @@ export const get_student_activities = catchAsync(async (req,res) =>{
         page: pageNum,
         limit: limitNum
     });
+    // console.log(activities)
     res.status(200).json({activities})
 });
 

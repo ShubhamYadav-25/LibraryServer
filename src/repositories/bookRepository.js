@@ -4,8 +4,7 @@ import USER_ROLES from "../constants/userRoles.js";
 const privilegedRoles = new Set(USER_ROLES.ADMIN, USER_ROLES.LIBRARIAN);
 
 
-export const getBooks = async (limit, offset,  role, searchParams = {}, executor = pool) => {
-  console.log(role)
+export const getBooks = async (limit, offset, searchParams = {}, executor = pool) => {
     let whereClauses = [];
     let queryParams = [];
 
@@ -16,8 +15,10 @@ export const getBooks = async (limit, offset,  role, searchParams = {}, executor
         image,
         author,
         genre,
-        date,
-        status
+        YEAR(date) as year,
+        status,
+        total_copy,
+        issued_copy
     `;
 
     if (searchParams.bookName) {
@@ -28,15 +29,6 @@ export const getBooks = async (limit, offset,  role, searchParams = {}, executor
     if (searchParams.genre) {
         whereClauses.push("genre LIKE ?");
         queryParams.push(`${searchParams.genre}`);
-    }
-
-    if (privilegedRoles.has(role)) {
-      console.log(privilegedRoles.has(role), role, privilegedRoles)
-        selectFields += `,
-            total_copy,
-            issued_copy,
-            date
-        `;
     }
 
     const where =
@@ -121,7 +113,7 @@ export const checkBookExistance = async(ISBN, executor = pool) =>{
     SELECT book_id FROM book
     WHERE isbn = ?;`,[ISBN]);
 
-  return result.length>0 ? true:false;
+  return result.length>0;
 }
 
 export const getCategoryId = async(genre, executor = pool) =>{

@@ -241,8 +241,9 @@ export const studentActivities = async(studentId, filter, limit, offset)=>{
             OR T.return_date >= NOW() - INTERVAL 7 DAY
         ) `
   }
-    const [rows] = await pool.query(
-      `SELECT
+
+  const query = `
+    SELECT
         B.book_name AS title,
         T.issue_date,
         T.due_date,
@@ -257,8 +258,9 @@ export const studentActivities = async(studentId, filter, limit, offset)=>{
         ${conditional_query}
     ORDER BY
         COALESCE(T.return_date, T.issue_date) DESC
-    LIMIT ? offset ?;`,[studentId, limit, offset]);
-
+    LIMIT ? offset ?;`;
+    
+    const [rows] = await pool.query(query, [studentId, limit, offset])
     return rows.length > 0 ? rows : [];
 }
 

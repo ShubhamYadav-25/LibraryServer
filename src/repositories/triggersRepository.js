@@ -29,38 +29,46 @@ export const tr_removeLikeonComment = async(review_id, executor = pool)=>{
 
 export const tr_updateRatingAfterReviewInsert = async (book_id, rating, executor = pool) => {
   const query = `
-    UPDATE book_ratings
-    SET
+    INSERT INTO book_ratings (
+      book_id, stars_1, stars_2, stars_3, stars_4, stars_5, review_count, rating
+    ) VALUES (
+      ?, 
+      (? = 1), (? = 2), (? = 3), (? = 4), (? = 5), 
+      1, ? 
+    )
+    ON DUPLICATE KEY UPDATE
       stars_1 = stars_1 + (? = 1),
       stars_2 = stars_2 + (? = 2),
       stars_3 = stars_3 + (? = 3),
       stars_4 = stars_4 + (? = 4),
       stars_5 = stars_5 + (? = 5),
-
+      
       review_count = review_count + 1,
-
+      
       rating = (
-        (
-          stars_1 * 1 +
-          stars_2 * 2 +
-          stars_3 * 3 +
-          stars_4 * 4 +
-          stars_5 * 5 +
-          ?
-        )
-        /
-        (review_count + 1)
-      )
-    WHERE book_id = ?;
+        stars_1 * 1 +
+        stars_2 * 2 +
+        stars_3 * 3 +
+        stars_4 * 4 +
+        stars_5 * 5
+      ) / review_count;
   `;
 
+  // We must provide values for the ? placeholders in exact order:
+  // 7 values for the INSERT portion, 5 values for the UPDATE portion.
   const values = [
-    rating, rating, rating, rating, rating, // for stars_1 to stars_5
-    rating,                                 // for weighted sum
-    book_id
+    // --- VALUES FOR THE INSERT ---
+    book_id, 
+    rating, rating, rating, rating, rating, // Evaluates to 1 or 0 for stars_1 through stars_5
+    rating,                                 // The initial average rating is just the first rating
+    
+    // --- VALUES FOR THE UPDATE ---
+    rating, rating, rating, rating, rating  // Used to increment the correct star column
   ];
 
   const [result] = await executor.execute(query, values);
+  // console.log("Upsert Result:", result);
+  
   return result.affectedRows;
 };
 

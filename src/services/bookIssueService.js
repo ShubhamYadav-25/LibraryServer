@@ -147,7 +147,10 @@ export const renewBook = async({copyId, student_id})=>{
   dueDate.setDate(dueDate.getDate() + period);
   const result = await changedueDate(row.transaction_id, dueDate);
 
-  return {message: "Book renewed successfully"};
+  if(result)
+    return {message: "Book renewed successfully"};
+  return {message:"Book renewed unsuccessfully"};
+
 }
 
 

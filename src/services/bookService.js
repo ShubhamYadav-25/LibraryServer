@@ -9,28 +9,17 @@ import ApiError from '../utils/errorHandler.js';
 
 
 
-export const fetchBooks = async ({user, role, page, limit, searchParams}) => {
+export const fetchBooks = async ({ page, limit, searchParams}) => {
   const safeLimit = (typeof limit === 'number' && limit > 0 && limit < 20) ? limit : 10;
   const offset = (page - 1) * safeLimit;
 
-  let booksData = await bookRepository.getBooks(safeLimit, offset, role, searchParams);
-  let liked = [];
-
-  if(role === USER_ROLES.STUDENT ){
-    liked = await bookRepository.getUserLikedBooks(user.student_id);
-  }
-
-  const { books, total } = booksData;
-  const result =
-    role === USER_ROLES.STUDENT
-      ? attachLikedFlag(books, liked) 
-      : books; // skip unnecessary processing
+  const {books, total} = await bookRepository.getBooks(safeLimit, offset, searchParams);
 
   return {
     page,
     limit: safeLimit,
     totalBooks: total,
-    books: result,
+    books,
   };
 };
 
