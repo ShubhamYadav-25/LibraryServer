@@ -1,0 +1,8 @@
+{
+  "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "embedding_dimension": 384,
+  "number_of_books": 400,
+  "created_at": "2026-07-18T04:33:06.249396",
+  "similarity": "cosine",
+  "embedding_model": "sentence-transformers/all-MiniLM-L6-v2"
+}

@@ -63,8 +63,9 @@ export const updateStudentDetails = async( {user, updates, student_id})=>{
 };
 
 
-export const getStudentActivities = async({student_id})=>{
-    return await studentActivities(student_id);
+export const getStudentActivities = async({student_id, filter, page, limit})=>{
+    const offset = (page - 1) * limit;
+    return await studentActivities(student_id, filter, limit, offset);
 };
 
 
@@ -184,8 +185,6 @@ export const fetchUserDetails = async ({user, student_id})=>{
             }
             break;
         default:
-            const {id, password, ...rest} = await getUser(user.id);
-            payload = rest
             break;
     }
     

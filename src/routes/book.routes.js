@@ -48,7 +48,7 @@ router.post("/",add_book);
 
 router.post("/:bookId/issues", issue_book);
 router.patch("/:bookId/returns", return_book);
-router.post("/:bookId/likes", like_dislike_book);
+router.post("/:bookId/like", like_dislike_book);
 router.post("/:bookId/requests", request_book);
 
 router.post("/:bookId/rating", rate_book);

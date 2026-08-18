@@ -126,7 +126,6 @@ export const getStudents = async (search, branch, limit, offset, executor = pool
     if (search) {
       conditions.push('(name LIKE ? OR email LIKE ?)');
       values.push(`%${search}%`);
-      values.push(`%${search}%`);
     }
 
     const whereClause = conditions.length
@@ -232,8 +231,16 @@ export const lockStudentRow = async (student_id, executor = pool)=>{
 }
 
 
-export const studentActivities = async(studentId)=>{
+export const studentActivities = async(studentId, filter, limit, offset)=>{
 
+  let conditional_query = ` T.student_id = ?`;
+
+  if(filter == 'recent'){
+    conditional_query += ` AND (
+            T.issue_date >= NOW() - INTERVAL 7 DAY
+            OR T.return_date >= NOW() - INTERVAL 7 DAY
+        ) `
+  }
     const [rows] = await pool.query(
       `SELECT
         B.book_name AS title,
@@ -247,14 +254,10 @@ export const studentActivities = async(studentId)=>{
     JOIN
         BOOK B ON C.book_id = B.book_id
     WHERE
-        T.student_id = ?
-        AND (
-            T.issue_date >= NOW() - INTERVAL 7 DAY
-            OR T.return_date >= NOW() - INTERVAL 7 DAY
-        )
+        ${conditional_query}
     ORDER BY
         COALESCE(T.return_date, T.issue_date) DESC
-    LIMIT 4;`,[studentId]);
+    LIMIT ? offset ?;`,[studentId, limit, offset]);
 
     return rows.length > 0 ? rows : [];
 }

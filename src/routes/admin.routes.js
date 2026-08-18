@@ -11,6 +11,9 @@ import {
   dashboard_stats,
   get_config,
   update_config,
+  get_report_chart,
+  get_report_table,
+  sync_recommendation_model,
 } from "../controllers/Admin.controller.js";
 
 import {
@@ -45,5 +48,11 @@ router.get("/books/overdue", get_overdue_books);
 /* ---------- SYSTEM ---------- */
 router.get("/transactions", get_transactions);
 router.get("/activities", get_all_activities);
+router.post("/recommendations/sync", sync_recommendation_model);
+
+/* ---------- SYSTEM ---------- */
+router.get("/reports/:reportType/chart", get_report_chart);
+router.get("/reports/:reportType/table", get_report_table);
+// router.get("/reports/:reportType/export",);
 
 export default router;

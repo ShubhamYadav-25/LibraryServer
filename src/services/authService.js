@@ -13,7 +13,7 @@ import ApiError from '../utils/errorHandler.js';
 import { verifyGoogleToken } from '../utils/googleAuth.js'
 import { sendEmail } from "../utils/email.js";
 import { verificationTemplate, welcomeTemplate } from "../constants/mailTemplate.js";
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 
 

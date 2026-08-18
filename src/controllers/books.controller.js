@@ -24,8 +24,8 @@ export const get_books = catchAsync(async (req, res) => {
 
     const { page, limit, bookName, genre } = req.query;
 
-    const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 12;
+    const pageNum = Number.parseInt(page) || 1;
+    const limitNum = Number.parseInt(limit) || 12;
 
     const searchParams = { bookName, genre };
 
@@ -74,7 +74,7 @@ export const add_copies = catchAsync(async(req,res)=>{
 
 
 export const renew_book = catchAsync(async(req,res) =>{
-    const { bookId, copyId} = req.params;
+    const { copyId} = req.params;
     const student_id = req.user.student_id;
 
     const message = await renewBook({copyId, student_id});
@@ -92,9 +92,9 @@ export const issue_book = catchAsync(async (req, res) => {
     await issueBook(
       data.studentId, 
       data.book_id, 
-      loan_period ? loan_period:12, 
+      loan_period ?? 12, 
       staff_id,
-      data.request_id ? data.request_id:null
+      data.request_id
     );
     res.json({
       message: "book issued successfully"
@@ -156,11 +156,15 @@ export const trending_books = catchAsync(async (req, res) => {
     const user = req?.user || null;
     const { page, limit } = req.query;
 
+    const pageNum = Number.parseInt(page) || 1;
+    const limitNum = Number.parseInt(limit) || 12;
+
     const books = await getTrendingBooks({
       user,
-      page,
-      limit
+      page: pageNum,
+      limit: limitNum
     });
+
     res.status(200).json({ books });
 });
 
@@ -168,8 +172,8 @@ export const trending_books = catchAsync(async (req, res) => {
 export const popular_books = catchAsync(async(req,res)=>{
 
     const { page, limit } = req.query;
-    const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 3;
+    const pageNum = Number.parseInt(page) || 1;
+    const limitNum = Number.parseInt(limit) || 3;
 
     const books = await getPopularBooks({
       page: pageNum, 

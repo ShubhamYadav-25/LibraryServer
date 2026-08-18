@@ -1,0 +1,8 @@
+{
+  "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "batch_size": 64,
+  "normalize_embeddings": true,
+  "faiss_index_type": "IndexFlatIP",
+  "random_seed": 42,
+  "device": "cpu"
+}

@@ -14,6 +14,7 @@ import authRouter from "./routes/auth.routes.js";
 import bookRouter from "./routes/book.routes.js";
 import userRouter from "./routes/user.routes.js";
 import adminRouter from "./routes/admin.routes.js";
+import recommendationRouter from "./routes/recommendation.routes.js";
 
 const app = express();
 
@@ -104,6 +105,7 @@ app.use("/v1/auth", authRouter);
 app.use("/v1/books", bookRouter);
 app.use("/v1/users", userRouter);
 app.use("/v1/admin", adminRouter);
+app.use("/v1/recommendations", recommendationRouter);
 
 app.use((req, res) => {
   res.status(404).json({

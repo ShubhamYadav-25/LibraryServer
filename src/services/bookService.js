@@ -13,9 +13,10 @@ export const fetchBooks = async ({user, role, page, limit, searchParams}) => {
   const safeLimit = (typeof limit === 'number' && limit > 0 && limit < 20) ? limit : 10;
   const offset = (page - 1) * safeLimit;
 
-  let booksData = await bookRepository.getBooks(searchParams, safeLimit, offset, role);
+  let booksData = await bookRepository.getBooks(safeLimit, offset, role, searchParams);
   let liked = [];
-  if(role === USER_ROLES.STUDENT){
+
+  if(role === USER_ROLES.STUDENT ){
     liked = await bookRepository.getUserLikedBooks(user.student_id);
   }
 
@@ -89,9 +90,9 @@ export const addBook = async(data)=>{
 
     const rating = await tr_initializeRating(book_id, connection);
     const copies = generateBookCopies(book_id, data.totalCopies || 1)
-    const copy = bookRepository.addBookCopies(copies, connection);
+    const copy = await bookRepository.addBookCopies(copies, connection);
 
-    if(!copy) throw new ApiError(500, "Error adding book details", false);
+    if(!copy || !rating) throw new ApiError(500, "Error adding book details", false);
     return { message: `Book added successfully`}
 
   } catch (error) {
@@ -123,8 +124,8 @@ export const addCopies = async({book_id, totalCopies})=>{
 
 
 export const getNewArrivals = async ({ user, page, limit }) => {
-  const pageNum = parseInt(page) || 1;
-  const limitNum = parseInt(limit) || 12;
+  const pageNum = Number.parseInt(page) || 1;
+  const limitNum = Number.parseInt(limit) || 12;
   const offset = (pageNum - 1) * limitNum;
 
   const newBooks = await bookRepository.newbookArrivals(limitNum, offset);
@@ -138,8 +139,8 @@ export const getNewArrivals = async ({ user, page, limit }) => {
 
 
 export const getTrendingBooks = async ({ user, page, limit }) => {
-  const pageNum = parseInt(page) || 1;
-  const limitNum = parseInt(limit) || 12;
+  const pageNum = Number.parseInt(page) || 1;
+  const limitNum = Number.parseInt(limit) || 12;
   const offset = (pageNum - 1) * limitNum;
 
   const trendingBooks = await bookRepository.getTrending(limitNum, offset);
@@ -154,8 +155,8 @@ export const getTrendingBooks = async ({ user, page, limit }) => {
 
 export const getPopularBooks = async({page, limit})=>{
 
-  const pageNum = parseInt(page) || 1;
-  const limitNum = parseInt(limit) || 3;
+  const pageNum = Number.parseInt(page) || 1;
+  const limitNum = Number.parseInt(limit) || 3;
   const offset = (pageNum - 1) * limitNum;
 
   const books = await bookRepository.popularThisMonth(limitNum, offset);
@@ -167,6 +168,10 @@ export const getPopularBooks = async({page, limit})=>{
 
 
 export const toggleBookLike = async ({ student_id, book_id }) => {
+  if(!student_id || !book_id){
+    console.log(student_id, book_id);
+    return new Error("Unathorized access", 401);
+  }
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();

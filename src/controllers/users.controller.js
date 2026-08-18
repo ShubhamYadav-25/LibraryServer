@@ -103,9 +103,16 @@ export const pay_fines = catchAsync(async(req, res)=>{
 
 
 export const get_student_activities = catchAsync(async (req,res) =>{
- 
+    const { filter, page, limit } = req.query;
+    const pageNum = Number.parseInt(page) || 1;
+    const limitNum = Number.parseInt(limit) || 6;
     const student_id = req.user.student_id || req.params.userId;
-    const activities = await getStudentActivities({student_id});
+    const activities = await getStudentActivities({
+        student_id, 
+        filter,
+        page: pageNum,
+        limit: limitNum
+    });
     res.status(200).json({activities})
 });
 
@@ -121,8 +128,8 @@ export const get_student_stats = catchAsync(async (req, res) =>{
 export const get_all_requests = catchAsync(async (req, res) =>{
 
     const {page, limit, mode} = req.query;
-    const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 7;
+    const pageNum = Number.parseInt(page) || 1;
+    const limitNum = Number.parseInt(limit) || 7;
     const safemode = mode !== undefined? String(mode): 'passive';
     const { data, total} = await fetchRequests({pageNum, limitNum, safemode});
 
@@ -137,10 +144,10 @@ export const get_all_requests = catchAsync(async (req, res) =>{
 
 export const get_requests = catchAsync(async (req, res) =>{
 
-    const student_id = req.user.student_id || req.user.student_id;
+    const student_id = req.user.student_id;
     const {page, limit, mode}  = req.query;
-    const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 7;
+    const pageNum = Number.parseInt(page) || 1;
+    const limitNum = Number.parseInt(limit) || 7;
 
     const data = await fetchRequest({
         student_id, 

@@ -1,6 +1,64 @@
 import * as adminRepository from "../repositories/adminRepository.js";
+import * as reportRepository from "../repositories/reportRepository.js";
+import getDateRange from "../utils/getRangeDate.js";
+import { REPORT_TYPES } from "../constants/reportTypes.js"
 import ApiError from '../utils/errorHandler.js';
 
+
+
+const chartRepositories = {
+    
+    [REPORT_TYPES.CIRCULATION]:
+        reportRepository.getCirculationChart,
+
+    [REPORT_TYPES.OVERDUE]:
+        reportRepository.getOverdueChart,
+
+    [REPORT_TYPES.POPULAR_BOOKS]:
+        reportRepository.getPopularBooksChart,
+
+    [REPORT_TYPES.INVENTORY]:
+        reportRepository.getInventoryChart,
+
+    [REPORT_TYPES.COLLECTION]:
+        reportRepository.getCollectionChart,
+
+    [REPORT_TYPES.USER_ACTIVITY]:
+        reportRepository.getUserActivityChart,
+
+    [REPORT_TYPES.FINE_COLLECTION]:
+        reportRepository.getFineCollectionChart,
+
+    [REPORT_TYPES.DAILY_ACTIVITY]:
+        reportRepository.getDailyActivityChart,
+};
+
+const TableRepositories = {
+
+    [REPORT_TYPES.CIRCULATION]:
+        reportRepository.getCirculationTable,
+
+    [REPORT_TYPES.OVERDUE]:
+        reportRepository.getOverdueTable,
+
+    [REPORT_TYPES.POPULAR_BOOKS]:
+        reportRepository.getPopularBooksTable,
+
+    [REPORT_TYPES.INVENTORY]:
+        reportRepository.getInventoryTable,
+
+    [REPORT_TYPES.COLLECTION]:
+        reportRepository.getCollectionTable,
+
+    [REPORT_TYPES.USER_ACTIVITY]:
+        reportRepository.getUserActivityTable,
+
+    [REPORT_TYPES.FINE_COLLECTION]:
+        reportRepository.getFineCollectionTable,
+
+    [REPORT_TYPES.DAILY_ACTIVITY]:
+        reportRepository.getDailyActivityTable,
+};
 
 
 const updateConfig = async (key, value) => {
@@ -43,9 +101,32 @@ const getallusertransactions = async ({pageNum, limitNum, status})=>{
     data: rows,
     total,
   };
-}
+};
 
 
+const getChartData = async({from, to, range, reportType})=>{
+    const {start, end} = getDateRange(range, from, to)
+    const repo = chartRepositories[reportType];
+    if( !repo){
+        return []
+    }
+    const chartData = await repo(start, end);
+
+    return chartData;
+};
+
+
+const getTableData = async({from, to, range, page, limit, reportType})=>{
+    const offset = (page-1)*limit;
+    const {start, end} = getDateRange(range, from, to);
+    const repo = TableRepositories[reportType];
+    if( !repo){
+        return []
+    }
+    const tableData = await repo(start, end, limit, offset);
+
+    return tableData;
+};
 
 export {
     updateConfig,
@@ -53,4 +134,6 @@ export {
     getStats,
     fetchRecentsActivities,
     getallusertransactions,
+    getChartData,
+    getTableData,
 }

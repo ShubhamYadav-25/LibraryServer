@@ -1,11 +1,11 @@
 import pool from "../config/db.js"; 
 import USER_ROLES from "../constants/userRoles.js";
 
-const privilegedRoles = [USER_ROLES.ADMIN, USER_ROLES.LIBRARIAN];
+const privilegedRoles = new Set(USER_ROLES.ADMIN, USER_ROLES.LIBRARIAN);
 
 
-export const getBooks = async (searchParams = {}, limit, offset,  role, executor = pool) => {
-
+export const getBooks = async (limit, offset,  role, searchParams = {}, executor = pool) => {
+  console.log(role)
     let whereClauses = [];
     let queryParams = [];
 
@@ -30,7 +30,8 @@ export const getBooks = async (searchParams = {}, limit, offset,  role, executor
         queryParams.push(`${searchParams.genre}`);
     }
 
-    if (privilegedRoles.includes(role)) {
+    if (privilegedRoles.has(role)) {
+      console.log(privilegedRoles.has(role), role, privilegedRoles)
         selectFields += `,
             total_copy,
             issued_copy,
@@ -81,7 +82,7 @@ export const getBook = async (bookid, role, studentId = null, executor = pool) =
     bd.pages,
     bd.language`;  
     
-  if (privilegedRoles.includes(role)) {
+  if (privilegedRoles.has(role)) {
     selectFields += `,
       bd.shelf_location AS location,
       vb.total_copy,
@@ -207,7 +208,7 @@ export const addBookCopies = async(copies, executor = pool)=>{
     Insert into book_copy(book_id,copy_id)
     values ? ;`, [copies]);
 
-  return rows.affectedRows > 0 ? true : false; 
+  return rows.affectedRows > 0;
 }
 
 
@@ -233,7 +234,7 @@ export const likeUnlikeBook = async (userId, bookId, executor = pool) => {
 
   const [deleteResult] = await executor.execute(
     `DELETE FROM book_likes 
-     WHERE student_id = ? AND book_id = ?`,
+     WHERE student_id = ? AND book_id = ? ;`,
     [userId, bookId]
   );
 
@@ -265,31 +266,56 @@ export const likeUnlikeBook = async (userId, bookId, executor = pool) => {
 };
 
 
-export const newbookArrivals =  async (limitNum, offset, executor = pool)=>{
-    const [row] = await executor.query(
-      `SELECT v.book_id, v.title, v.ISBN,v.image, v.author, 
-      v.genre, v.date, v.status FROM vw_books v
-      JOIN book b on v.book_id = b.book_id
-      WHERE v.date >= NOW() - INTERVAL 90 DAY
-      ORDER BY b.created_at DESC
-      LIMIT ? OFFSET ?;`,
-      [limitNum, offset]);
-    return row;
-}
+export const newbookArrivals = async (limitNum, offset, executor = pool) => {
+  const [row] = await executor.query(
+    `SELECT v.book_id, v.title, v.ISBN, v.image, v.author, 
+     v.genre, v.date, v.status, b.like_count
+     FROM vw_books v
+     JOIN book b ON v.book_id = b.book_id
+     ORDER BY 
+       CASE WHEN b.publication_date IS NOT NULL THEN 0 ELSE 1 END,
+       b.publication_date DESC,
+       b.created_at DESC,
+       v.book_id DESC
+     LIMIT ? OFFSET ?;`,
+    [limitNum, offset]
+  );
+  return row;
+};
 
-
-export const getTrending = async(limitNum, offset, executor = pool)=>{
-
-    const [row] = await executor.query(
-      `SELECT v.book_id, v.title, v.ISBN,v.image, v.author, 
-      v.genre, v.date, v.status FROM vw_books as v
-      JOIN book b on v.book_id = b.book_id
-      WHERE b.like_count!=0 
-      ORDER BY b.like_count DESC
-      LIMIT ? OFFSET ?;`,
-      [limitNum, offset]);
-    return row;
-}
+export const getTrending = async (limitNum, offset, executor = pool) => {
+  const [row] = await executor.query(
+    `SELECT 
+       v.book_id, 
+       v.title, 
+       v.ISBN, 
+       v.image, 
+       v.author, 
+       v.genre, 
+       v.date, 
+       v.status, 
+       b.like_count
+     FROM vw_books v
+     JOIN book b ON v.book_id = b.book_id
+     LEFT JOIN (
+       SELECT book_id, COUNT(*) AS req_count 
+       FROM book_request 
+       GROUP BY book_id
+     ) req ON req.book_id = b.book_id
+     LEFT JOIN (
+       SELECT bc.book_id, COUNT(*) AS issue_count 
+       FROM transaction_history th
+       JOIN book_copy bc ON th.copy_id = bc.copy_id
+       GROUP BY bc.book_id
+     ) iss ON iss.book_id = b.book_id
+     ORDER BY 
+       (b.like_count * 3 + COALESCE(req.req_count, 0) * 2 + COALESCE(iss.issue_count, 0) * 2) DESC,
+       v.book_id ASC
+     LIMIT ? OFFSET ?;`,
+    [limitNum, offset]
+  );
+  return row;
+};
 
 
 export const getMostRatedBooks = async(limit, offset, executor = pool)=>{
