@@ -85,43 +85,43 @@ The server adopts a clean **Controller-Service-Repository** layered architecture
 
 ```mermaid
 flowchart TD
-    Client([React Frontend / Postman / Mobile]) -->|HTTP Requests| App[Express App src/app.js]
+    Client(["React Frontend / Postman / Mobile"]) -->|HTTP Requests| App["Express App (src/app.js)"]
     
-    subgraph MiddlewareLayer [Security & Middleware Pipeline]
-        App --> Helmet[Helmet CORP]
-        Helmet --> RateLimiter[Rate Limiters]
-        RateLimiter --> CORS[CORS Filter]
-        CORS --> Cookie[Cookie & Body Parsers]
-        Cookie --> AuthMW[JWT & CSRF & RBAC Middlewares]
+    subgraph MiddlewareLayer ["Security & Middleware Pipeline"]
+        App --> Helmet["Helmet (CORP)"]
+        Helmet --> RateLimiter["Rate Limiters"]
+        RateLimiter --> CORS["CORS Filter"]
+        CORS --> Cookie["Cookie & Body Parsers"]
+        Cookie --> AuthMW["JWT & CSRF & RBAC Middlewares"]
     end
     
-    subgraph RoutingLayer [Route Dispatcher]
-        AuthMW --> AuthR[/v1/auth]
-        AuthMW --> BookR[/v1/books]
-        AuthMW --> UserR[/v1/users]
-        AuthMW --> AdminR[/v1/admin]
-        AuthMW --> RecR[/v1/recommendations]
+    subgraph RoutingLayer ["Route Dispatcher"]
+        AuthMW --> AuthR["/v1/auth"]
+        AuthMW --> BookR["/v1/books"]
+        AuthMW --> UserR["/v1/users"]
+        AuthMW --> AdminR["/v1/admin"]
+        AuthMW --> RecR["/v1/recommendations"]
     end
     
-    subgraph ServiceLayer [Business Logic Services]
-        AuthR --> AuthService[authService.js]
-        BookR --> BookService[bookService.js & bookIssueService.js]
-        UserR --> UserService[userService.js]
-        AdminR --> AdminService[adminService.js]
-        RecR --> RecService[recommendationService.js]
+    subgraph ServiceLayer ["Business Logic Services"]
+        AuthR --> AuthService["authService.js"]
+        BookR --> BookService["bookService.js & bookIssueService.js"]
+        UserR --> UserService["userService.js"]
+        AdminR --> AdminService["adminService.js"]
+        RecR --> RecService["recommendationService.js"]
         
-        RecService --> RecModel[AI Recommendation Model]
-        AuthService --> EmailUtil[Brevo Email Dispatcher]
+        RecService --> RecModel["AI Recommendation Model"]
+        AuthService --> EmailUtil["Brevo Email Dispatcher"]
     end
     
-    subgraph DataLayer [Repository & Database Layer]
-        AuthService --> AuthRepo[(authRepository.js)]
-        BookService --> BookRepo[(bookRepository.js)]
-        BookService --> IssueRepo[(bookIssueRepository.js)]
-        UserService --> AdminRepo[(adminRepository.js)]
-        RecService --> RecRepo[(recommendationRepository.js)]
+    subgraph DataLayer ["Repository & Database Layer"]
+        AuthService --> AuthRepo[("authRepository.js")]
+        BookService --> BookRepo[("bookRepository.js")]
+        BookService --> IssueRepo[("bookIssueRepository.js")]
+        UserService --> AdminRepo[("adminRepository.js")]
+        RecService --> RecRepo[("recommendationRepository.js")]
         
-        AuthRepo --> DB[(MySQL / TiDB Cloud Pool)]
+        AuthRepo --> DB[("MySQL / TiDB Cloud Pool")]
         BookRepo --> DB
         IssueRepo --> DB
         AdminRepo --> DB
